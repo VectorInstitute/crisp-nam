@@ -1,0 +1,14 @@
+batch_norm: 'False'
+batch_size: 256
+dataset: synthetic
+dropout_rate: 0.4658624337768122
+event_weighting: balanced
+feature_dropout: 0.1030671304223022
+hidden_dimensions: 64
+l2_reg: 0.0002046946147824355
+learning_rate: 0.0022143653162863685
+n_folds: 5
+num_epochs: 500
+patience: 10
+scaling: standard
+seed: 42

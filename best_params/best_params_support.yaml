@@ -1,0 +1,14 @@
+batch_norm: 'False'
+batch_size: 256
+dataset: support
+dropout_rate: 0.07197756936241921
+event_weighting: balanced
+feature_dropout: 0.044063221194967195
+hidden_dimensions: 64,128
+l2_reg: 0.00029717650157100014
+learning_rate: 0.0026522818296989994
+n_folds: 5
+num_epochs: 500
+patience: 10
+scaling: standard
+seed: 42

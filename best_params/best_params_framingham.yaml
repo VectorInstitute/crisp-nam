@@ -1,0 +1,14 @@
+batch_norm: 'True'
+batch_size: 256
+dataset: framingham
+dropout_rate: 0.6453769729489454
+event_weighting: balanced
+feature_dropout: 0.33376854658546584
+hidden_dimensions: 64,256
+l2_reg: 0.0002001599955223287
+learning_rate: 0.0025655797933732604
+n_folds: 5
+num_epochs: 500
+patience: 10
+scaling: minmax
+seed: 42

@@ -1,0 +1,14 @@
+batch_norm: 'False'
+batch_size: 256
+dataset: pbc
+dropout_rate: 0.42560118193734475
+event_weighting: balanced
+feature_dropout: 0.2949604753444437
+hidden_dimensions: '32'
+l2_reg: 1.2219850229378751e-05
+learning_rate: 0.0046394744463322994
+n_folds: 5
+num_epochs: 500
+patience: 10
+scaling: standard
+seed: 42

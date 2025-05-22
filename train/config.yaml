@@ -1,0 +1,20 @@
+# Dataset
+dataset: support
+scaling: standard
+
+# Training parameters
+num_epochs: 500
+batch_size: 256
+learning_rate: 1e-3
+l2_reg: 1e-3
+patience: 10
+
+# Model parameters
+dropout_rate: 0.3
+feature_dropout: 0.2
+hidden_dimensions: 64,64
+batch_norm: False
+
+# Other parameters
+seed: 42
+n_folds: 2

@@ -1,0 +1,19 @@
+scaling: standard  
+num_epochs: 250  
+batch_size: 256  
+learning_rate: 1.0e-3  
+l2_reg: 1.0e-5  
+patience: 10   
+alpha: 1.0  
+beta: 0.0  
+gamma: 0.0  
+h_dim_shared: 128  
+h_dim_CS: 32  
+num_layers_shared: 1  
+num_layers_CS: 2  
+num_categories: 100  
+active_fn: tanh  
+dropout_rate: 0.3  
+seed: 42  
+n_folds: 5  
+
