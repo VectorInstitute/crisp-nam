@@ -4,6 +4,8 @@ CRISP-NAM (Competing Risks Interpretable Survival Prediction with Neural Additiv
 competing risks survival analysis which extends the neural additive architecture to model cause-specific hazards while preserving feature-level interpretability.
 
 ## Project Directory Structure
+
+```text
 .
 ├── best_params
 │   ├── best_params_framingham_deephit.yaml
@@ -88,6 +90,8 @@ competing risks survival analysis which extends the neural additive architecture
     ├── loss.py
     ├── plotting.py
     └── risk_cif.py
+
+```
 
 ## Getting Started
 
