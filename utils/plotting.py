@@ -2,19 +2,18 @@ import torch
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from typing import Union, List
 
-def plot_feature_importance(
-    model,
-    x_data,
-    feature_names=None,
-    n_top=5,
-    n_bottom=5,
-    risk_idx=1,
-    figsize=(8, 6),
-    output_file=None,
-    color_positive='#2196F3',
-    color_negative='#F44336'
-):
+def plot_feature_importance(model: torch.nn.Module,
+                            x_data: Union[np.ndarray, torch.Tensor],
+                            feature_names = None,
+                            n_top:int = 5,
+                            n_bottom:int = 5,
+                            risk_idx:int = 1,
+                            figsize: tuple = (8, 6),
+                            output_file:str = None,
+                            color_positive:str = '#2196F3',
+                            color_negative:str = '#F44336') -> tuple:
     """
     Plot feature importance with both top positive and negative influences,
     handling both CPU and CUDA devices automatically.
@@ -82,16 +81,14 @@ def plot_feature_importance(
     return fig, ax, top_pos, top_neg
 
 
-def plot_coxnam_shape_functions(
-    model,
-    X,
-    risk_to_plot=1,
-    feature_names=None,
-    top_features=None,
-    ncols=3,
-    figsize=(12, 8),
-    output_file=None
-):
+def plot_coxnam_shape_functions(model:torch.nn.Module,
+                                X: Union[np.ndarray, torch.Tensor],
+                                risk_to_plot:int = 1,
+                                feature_names:List[str] = None,
+                                top_features:List[str] = None,
+                                ncols:int = 3,
+                                figsize:tuple = (12, 8),
+                                output_file:str = None) -> tuple:
     """
     Plot shape functions for each feature in a CoxNAM model,
     automatically handling CPU vs CUDA inputs.

@@ -1,8 +1,8 @@
 import torch
 
-
-def weighted_negative_log_likelihood_loss(risk_scores, times, events, num_competing_risks, 
-                                         event_weights=None, sample_weights=None, eps=1e-8):
+def weighted_negative_log_likelihood_loss(risk_scores, times, events,
+                                          num_competing_risks, event_weights=None,
+                                          sample_weights=None, eps=1e-8) -> float:
     """
     Computes the weighted negative log-likelihood loss for competing risks Cox model.
     
@@ -68,11 +68,8 @@ def weighted_negative_log_likelihood_loss(risk_scores, times, events, num_compet
     # Return average loss
     return loss / max(n_events, 1)
 
-
-
-
-
-def negative_log_likelihood_loss(risk_scores, times, events, num_competing_risks, eps=1e-8):
+def negative_log_likelihood_loss(risk_scores, times, events,
+                                 num_competing_risks, eps=1e-8):
     """
     Computes the negative log-likelihood loss for competing risks Cox model.
     
@@ -125,7 +122,7 @@ def negative_log_likelihood_loss(risk_scores, times, events, num_competing_risks
     # Return average loss
     return loss / max(n_events, 1)
 
-def compute_l2_penalty(model, include_bias=False):
+def compute_l2_penalty(model, include_bias=False) -> int:
     """
     Compute L2 regularization penalty on model parameters
     

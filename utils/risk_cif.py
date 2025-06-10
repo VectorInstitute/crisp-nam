@@ -1,8 +1,11 @@
-from sksurv.nonparametric import cumulative_incidence_competing_risks
-import numpy as np
 import torch
-from sksurv.util import Surv
-def compute_baseline_cif(times, events, eval_times, event_type):
+import numpy as np
+from typing import List, Any
+
+def compute_baseline_cif(times:np.ndarray,
+                         events:np.ndarray,
+                         eval_times:List[Any],
+                         event_type:np.ndarray) -> np.ndarray:
     """
     Compute baseline cumulative incidence function for a specific event type
     
@@ -36,7 +39,11 @@ def compute_baseline_cif(times, events, eval_times, event_type):
         
     return baseline_cif
 
-def predict_absolute_risk(model, x, baseline_cifs, eval_times, device="cpu"):
+def predict_absolute_risk(model: torch.Module,
+                          x:np.ndarray,
+                          baseline_cifs:np.ndarray,
+                          eval_times: np.ndarray,
+                          device:str="cpu") -> np.ndarray:
     """
     Predict absolute risk (cumulative incidence) at specified times
     
@@ -85,7 +92,11 @@ def predict_absolute_risk(model, x, baseline_cifs, eval_times, device="cpu"):
     return abs_risks
 
 
-def predict_cif(model, x, baseline_cif, times, event_of_interest):
+def predict_cif(model:torch.Module,
+                x:np.ndarray,
+                baseline_cif:np.ndarray,
+                times:np.ndarray,
+                event_of_interest:int) -> np.ndarray:
     """
     Predict cumulative incidence function for a specific competing risk.
 
@@ -112,7 +123,9 @@ def predict_cif(model, x, baseline_cif, times, event_of_interest):
     
     return cif_pred
 
-def predict_risk(model, x_input, device='cpu'):
+def predict_risk(model:np.ndarray,
+                 x_input:np.ndarray,
+                 device:str = 'cpu'):
     """
     Predicts relative risk scores for each competing risk.
 
@@ -137,9 +150,11 @@ def predict_risk(model, x_input, device='cpu'):
 
     return risks.cpu().numpy()  
 
-
-
-def predict_absolute_risk(model, x_input, baseline_cifs, times, device='cpu'):
+def predict_absolute_risk(model:torch.Tensor,
+                          x_input:np.ndarray,
+                          baseline_cifs:List[Any],
+                          times:List[Any],
+                          device:str = 'cpu') -> np.ndarray:
     """
     Predict absolute risk (CIF) for each competing event by given time points.
 
