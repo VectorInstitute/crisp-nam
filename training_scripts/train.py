@@ -1,32 +1,30 @@
-import numpy as np
+import configargparse
+from collections import defaultdict
+
 import torch
+import numpy as np
+import pandas as pd
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, Subset
+import matplotlib.pyplot as plt
+from tabulate import tabulate
+from torch.utils.data import DataLoader, Subset
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from collections import defaultdict
 from sksurv.util import Surv
-import matplotlib.pyplot as plt
 from sksurv.metrics import concordance_index_ipcw
-import configargparse
-import random
-import pandas as pd
-from tabulate import tabulate
 
-  
-from model.crisp_nam_model import CrispNamModel
-from utils.loss import weighted_negative_log_likelihood_loss, negative_log_likelihood_loss, compute_l2_penalty
-from datasets.SurvivalDataset import SurvivalDataset
-from datasets.framingham_dataset import load_framingham
-from datasets.support_dataset import load_support_dataset
-from datasets.pbc_dataset import load_pbc2_dataset
-from datasets.synthetic_dataset import load_synthetic_dataset
-from metrics.calibration import brier_score
-from metrics.discrimination import auc_td
-from utils.risk_cif import predict_absolute_risk, compute_baseline_cif
-from utils.plotting import plot_coxnam_shape_functions, plot_feature_importance
-
+from crisp_nam.models import CrispNamModel
+from crisp_nam.utils import (
+    weighted_negative_log_likelihood_loss,
+    negative_log_likelihood_loss,
+    compute_l2_penalty
+)
+from data_utils import *
+from model_utils import EarlyStopping, set_seed
+from crisp_nam.metrics import brier_score, auc_td
+from crisp_nam.utils import predict_absolute_risk, compute_baseline_cif
+from crisp_nam.utils import plot_coxnam_shape_functions, plot_feature_importance
 
 def parse_args():
     parser = configargparse.ArgumentParser(
@@ -72,32 +70,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def set_seed(seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-
-class EarlyStopping:
-    def __init__(self, patience=10, min_delta=1e-4):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_loss = np.inf
-        self.counter = 0
-        self.should_stop = False
-
-    def step(self, val_loss):
-        if val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
-            self.counter = 0
-        else:
-            self.counter += 1
-        if self.counter >= self.patience:
-            self.should_stop = True
 
 
 def train_model(model, train_loader, val_loader=None, num_epochs=500, learning_rate=1e-3, 
@@ -341,7 +313,7 @@ def main():
     def parse_args():
         parser = configargparse.ArgumentParser(
             description="Training script for MultiTaskCoxNAM model",
-            default_config_files=["config.yml"],
+            default_config_files=["config.yaml"],
             config_file_parser_class=configargparse.YAMLConfigFileParser
         )
         

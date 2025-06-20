@@ -1,29 +1,25 @@
-import numpy as np
+import os
+import configargparse
+from collections import defaultdict
+
 import torch
-import torch.nn as nn
+import numpy as np
 import torch.optim as optim
+from sksurv.util import Surv
 from torch.utils.data import Dataset, DataLoader, Subset
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from collections import defaultdict
-import matplotlib.pyplot as plt
 from sksurv.metrics import concordance_index_ipcw
-from sksurv.util import Surv
-import configargparse
-import random
-import os
 
-# Import the DeepHit model implementation
-from model.deephit_model import DeepHit, SurvivalDatasetDeepHit, create_fc_mask1, create_fc_mask2
-
-# Keep other utility imports
-from datasets.framingham_dataset import load_framingham
-from datasets.support_dataset import load_support_dataset
-from datasets.pbc_dataset import load_pbc2_dataset
-from datasets.synthetic_dataset import load_synthetic_dataset
-from metrics.calibration import brier_score
-from metrics.discrimination import auc_td
-
+from data_utils import *
+from model_utils import (
+    set_seed,
+    EarlyStopping,
+    create_fc_mask1,
+    create_fc_mask2
+)
+from crisp_nam.metrics import brier_score, auc_td
+from crisp_nam.models import DeepHit
 
 def parse_args():
     parser = configargparse.ArgumentParser(
@@ -84,35 +80,6 @@ def parse_args():
                       help="Number of folds for cross-validation")
     
     return parser.parse_args()
-
-
-def set_seed(seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-
-class EarlyStopping:
-    def __init__(self, patience=10, min_delta=1e-4):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_loss = np.inf
-        self.counter = 0
-        self.should_stop = False
-
-    def step(self, val_loss):
-        if val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
-            self.counter = 0
-        else:
-            self.counter += 1
-        if self.counter >= self.patience:
-            self.should_stop = True
-
 
 def train_deephit_model(model, train_loader, val_loader=None, alpha=1.0, beta=1.0, gamma=1.0,
                          num_epochs=500, learning_rate=1e-3, l2_reg=0.01, patience=10, verbose=True):

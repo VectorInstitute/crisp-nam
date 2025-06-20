@@ -1,63 +1,35 @@
-import os
-import random
 import yaml
-import numpy as np
+import configargparse
+from collections import defaultdict
+
 import torch
+import optuna
+import numpy as np
 import torch.nn as nn
+from sksurv.util import Surv
 import torch.optim as optim
-from torch.cuda.amp import autocast, GradScaler
+from tabulate import tabulate
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-import optuna
-import configargparse
-from collections import defaultdict
-from tabulate import tabulate
+from sksurv.metrics import (
+    cumulative_dynamic_auc,
+    brier_score,
+    concordance_index_ipcw
+)
 
-
-from sksurv.util import Surv
-from sksurv.metrics import cumulative_dynamic_auc, brier_score, concordance_index_ipcw
-
-from model.crisp_nam_model import CrispNamModel
-from utils.loss import (
+from data_utils import *
+from model_utils import EarlyStopping, set_seed
+from crisp_nam.models import CrispNamModel
+from crisp_nam.utils import (
     weighted_negative_log_likelihood_loss,
     negative_log_likelihood_loss,
     compute_l2_penalty,
 )
-from utils.risk_cif import predict_absolute_risk, compute_baseline_cif
-from utils.plotting import plot_coxnam_shape_functions, plot_feature_importance
-from datasets.framingham_dataset import load_framingham
-from datasets.support_dataset import load_support_dataset
-from datasets.pbc_dataset import load_pbc2_dataset
-from datasets.synthetic_dataset import load_synthetic_dataset
-
-
-
-# ----------------------- Utilities ----------------------- #
-def set_seed(seed: int = 42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-
-class EarlyStopping:
-    def __init__(self, patience: int = 10, min_delta: float = 1e-4):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_loss = float('inf')
-        self.counter = 0
-        self.should_stop = False
-
-    def step(self, loss: float):
-        if loss < self.best_loss - self.min_delta:
-            self.best_loss = loss
-            self.counter = 0
-        else:
-            self.counter += 1
-        self.should_stop = (self.counter >= self.patience)
-        return self.should_stop
-
+from crisp_nam.utils import (
+    predict_absolute_risk,
+    compute_baseline_cif
+)
 
 def train_model(
     model: nn.Module,

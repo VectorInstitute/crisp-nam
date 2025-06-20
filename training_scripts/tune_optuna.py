@@ -1,36 +1,28 @@
-import numpy as np
+import yaml  
+import configargparse
+
+import optuna
 import torch
-import torch.nn as nn
+import numpy as np
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, Subset
+from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from collections import defaultdict
-from sksurv.util import Surv
-import matplotlib.pyplot as plt
-import configargparse
-import random
-import optuna
-import yaml  
-import os 
 
-from model.crisp_nam_model import CrispNamModel
-from utils.loss import weighted_negative_log_likelihood_loss, negative_log_likelihood_loss, compute_l2_penalty
-from datasets.SurvivalDataset import SurvivalDataset
-from datasets.framingham_dataset import load_framingham
-from datasets.support_dataset import load_support_dataset
-from datasets.pbc_dataset import load_pbc2_dataset
-from datasets.synthetic_dataset import load_synthetic_dataset
-from metrics.calibration import brier_score
-from metrics.discrimination import cumulative_dynamic_auc
-from utils.risk_cif import predict_absolute_risk, compute_baseline_cif
-from utils.plotting import plot_coxnam_shape_functions, plot_feature_importance
-
+from crisp_nam.models import CrispNamModel
+from crisp_nam.utils import (
+    weighted_negative_log_likelihood_loss,
+    negative_log_likelihood_loss,
+    compute_l2_penalty
+)
+from data_utils import *
+from model_utils import EarlyStopping, set_seed
+from crisp_nam.utils import predict_absolute_risk, compute_baseline_cif
 
 def parse_args():
     parser = configargparse.ArgumentParser(
         description="Training script for MultiTaskCoxNAM model with Optuna",
-        default_config_files=["config.yml"],
+        default_config_files=["config.yaml"],
         config_file_parser_class=configargparse.YAMLConfigFileParser
     )
     
@@ -67,36 +59,6 @@ def parse_args():
                       help="Random seed for reproducibility")
     
     return parser.parse_args()
-
-
-def set_seed(seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-
-class EarlyStopping:
-    def __init__(self, patience=10, min_delta=1e-4):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_loss = np.inf
-        self.counter = 0
-        self.should_stop = False
-
-    def step(self, val_loss):
-        if val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
-            self.counter = 0
-        else:
-            self.counter += 1
-        if self.counter >= self.patience:
-            self.should_stop = True
-        return self.best_loss
-
 
 def train_model(model, train_loader, val_loader=None, num_epochs=500, learning_rate=1e-3, 
                 l2_reg=0.01, patience=10, event_weights=None, verbose=True):
@@ -168,11 +130,6 @@ def train_model(model, train_loader, val_loader=None, num_epochs=500, learning_r
 
 
 def evaluate_model(model, x_val, t_val, e_val, t_train, e_train, abs_risks, times):
-    from sksurv.util import Surv 
-    from sksurv.metrics import cumulative_dynamic_auc, brier_score, concordance_index_ipcw
-    from collections import defaultdict
-    import numpy as np
-
     # Structured arrays for training and validation
     survival_train = Surv.from_arrays(e_train != 0, t_train)
     survival_val = Surv.from_arrays(e_val != 0, t_val)

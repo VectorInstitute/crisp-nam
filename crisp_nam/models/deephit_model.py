@@ -249,31 +249,3 @@ class DeepHit(nn.Module):
         with torch.no_grad():
             out, _ = self.forward(x)
         return out
-
-
-# Utility functions to create masks for DeepHit
-def create_fc_mask1(k, t, num_Event, num_Category, device=None):
-    """Create mask1 for loss calculation - for uncensored loss"""
-    N = len(k)
-    mask = torch.zeros((N, num_Event, num_Category), device=device)
-    
-    for i in range(N):
-        if k[i] > 0:  # Not censored
-            event_idx = int(k[i] - 1)
-            time_idx = int(t[i])
-            if time_idx < num_Category:
-                mask[i, event_idx, time_idx] = 1.0
-    
-    return mask
-
-def create_fc_mask2(t, num_Category, device=None):
-    """Create mask2 for loss calculation - for censored loss"""
-    N = len(t)
-    mask = torch.zeros((N, num_Category), device=device)
-    
-    for i in range(N):
-        time_idx = int(t[i])
-        for j in range(time_idx, num_Category):
-            mask[i, j] = 1.0
-    
-    return mask
