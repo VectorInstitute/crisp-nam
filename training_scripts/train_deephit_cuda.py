@@ -216,7 +216,7 @@ def train_deephit_model(model, train_loader, val_loader=None, alpha=1.0, beta=1.
                                       e.to(device, non_blocking=True), t_disc.to(device, non_blocking=True)
                     
                     # Create masks for validation (using precomputed masks)
-                    mask1 = create_fc_mask1(e, t_disc, num_Event, num_Category, device)
+                    mask1 = create_fc_mask1_gpu(e, t_disc, num_Event, num_Category, device)
                     mask2 = torch.cat([precomputed_masks2[int(t_val.item())] for t_val in t_disc], dim=0)
                     
                     # Forward pass
