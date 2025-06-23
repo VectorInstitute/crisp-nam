@@ -214,7 +214,7 @@ class CrispNamModel(nn.Module):
                 # Calculate importance for each risk (mean absolute value)
             for j in range(self.num_competing_risks):
                 # Apply the risk-specific projection
-                risk_specific_output = self.risk_projections[i][j](feature_values)
+                risk_specific_output = self.risk_projections[i][j](feature_repr)
                 abs_values = torch.abs(risk_specific_output).cpu().numpy()
                 importance[f'risk_{j+1}'][f'feature_{i}'] = float(np.mean(abs_values))
                                     
