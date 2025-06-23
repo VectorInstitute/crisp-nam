@@ -39,58 +39,6 @@ def compute_baseline_cif(times:np.ndarray,
         
     return baseline_cif
 
-def predict_absolute_risk(model: torch.Module,
-                          x:np.ndarray,
-                          baseline_cifs:np.ndarray,
-                          eval_times: np.ndarray,
-                          device:str="cpu") -> np.ndarray:
-    """
-    Predict absolute risk (cumulative incidence) at specified times
-    
-    Args:
-        model: Trained CoxNAM model
-        x: Feature matrix
-        baseline_cifs: Dictionary of baseline CIFs for each event type
-        eval_times: Times at which to evaluate the CIF
-        device: Device to run computations on
-        
-    Returns:
-        Numpy array of predicted absolute risks with shape (n_samples, n_risks, n_times)
-    """
-    model.eval()
-    
-    # Convert to tensor if needed
-    if not isinstance(x, torch.Tensor):
-        x = torch.FloatTensor(x).to(device)
-        
-    with torch.no_grad():
-        # Get risk scores
-        risk_scores, _ = model(x)
-        
-        # Convert to hazard ratios
-        hazard_ratios = [torch.exp(score).cpu().numpy() for score in risk_scores]
-        
-        # Initialize prediction array
-        n_samples = x.shape[0]
-        n_risks = model.num_competing_risks
-        n_times = len(eval_times)
-        abs_risks = np.zeros((n_samples, n_risks, n_times))
-        
-        # Compute absolute risk for each sample, risk, and time
-        for k in range(n_risks):
-            # Skip if baseline CIF is not available
-            if k+1 not in baseline_cifs:
-                continue
-                
-            baseline_cif = baseline_cifs[k+1]
-            
-            for i in range(n_samples):
-                for j, t in enumerate(eval_times):
-                    # Simple Fine-Gray model for cumulative incidence
-                    abs_risks[i, k, j] = 1 - np.exp(-baseline_cif[j] * hazard_ratios[k][i])
-    
-    return abs_risks
-
 
 def predict_cif(model:torch.Module,
                 x:np.ndarray,
