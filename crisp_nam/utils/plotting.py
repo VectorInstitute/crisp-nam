@@ -1,8 +1,9 @@
+import matplotlib.pyplot as plt
+from typing import Union, List
+
 import torch
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from typing import Union, List
 
 def plot_feature_importance(model: torch.nn.Module,
                             x_data: Union[np.ndarray, torch.Tensor],

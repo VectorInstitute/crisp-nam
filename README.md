@@ -3,130 +3,115 @@
 CRISP-NAM (Competing Risks Interpretable Survival Prediction with Neural Additive Models), an interpretable neural additive model for 
 competing risks survival analysis which extends the neural additive architecture to model cause-specific hazards while preserving feature-level interpretability.
 
-## Project Directory Structure
+## Requirements
+Python >=3.10
 
-```text
-.
-├── best_params
-│   ├── best_params_framingham_deephit.yaml
-│   ├── best_params_framingham.yaml
-│   ├── best_params_pbc_deephit.yaml
-│   ├── best_params_pbc.yaml
-│   ├── best_params_support.yaml
-│   ├── best_params_support2_deephit.yaml
-│   ├── best_params_synthetic_deephit.yaml
-│   └── best_params_synthetic.yaml
-├── datasets
-│   ├── framingham_dataset.py
-│   ├── framingham.csv
-│   ├── metabric
-│   │   ├── cleaned_features_final.csv
-│   │   └── label.csv
-│   ├── pbc_dataset.py
-│   ├── pbc2.csv
-│   ├── support_dataset.py
-│   ├── support2.csv
-│   ├── SurvivalDataset.py
-│   ├── synthetic_comprisk.csv
-│   └── synthetic_dataset.py
-├── figs
-│   ├── feature_importance_risk_new_1_framingham.png
-│   ├── feature_importance_risk_new_2_framingham.png
-│   ├── shape_functions_top_features_risk1_framingham.png
-│   └── shape_functions_top_features_risk2_framingham.png
+## Repository Structure
+
+```
+crisp_nam
+├── models
+    ├── __init__.py
+    ├── crisp_nam_model.py
+    └── deephit_model.py
 ├── metrics
-│   ├── __init__.py
-│   ├── __pycache__
-│   │   ├── __init__.cpython-310.pyc
-│   │   ├── calibration.cpython-310.pyc
-│   │   ├── discrimination.cpython-310.pyc
-│   │   └── ipcw.cpython-310.pyc
-│   ├── calibration.py
-│   ├── discrimination.py
-│   └── ipcw.py
-├── model
-│   ├── __init__.py
-│   ├── __pycache__
-│   │   ├── __init__.cpython-310.pyc
-│   │   ├── coxnam_competing.cpython-310.pyc
-│   │   ├── crisp_nam_model.cpython-310.pyc
-│   │   └── deephit_model.cpython-310.pyc
-│   ├── crisp_nam_model.py
-│   └── deephit_model.py
-├── nfg
-│   ├── __init__.py
-│   ├── datasets.py
-│   ├── dsm
-│   │   ├── __init__.py
-│   │   ├── contrib
-│   │   │   ├── dcm_api.py
-│   │   │   ├── dcm_torch.py
-│   │   │   └── dcm_utilities.py
-│   │   ├── dsm_api.py
-│   │   ├── dsm_torch.py
-│   │   ├── losses.py
-│   │   └── utilities.py
-│   ├── losses.py
-│   ├── metrics
-│   │   ├── __init__.py
-│   │   ├── calibration.py
-│   │   ├── discrimination.py
-│   │   └── utils.py
-│   ├── nfg_api.py
-│   ├── nfg_torch.py
-│   └── utilities.py
-├── pyproject.toml
-├── README.md
-├── train
-│   ├── config.yaml
-│   ├── train_deephit_cuda.py
-│   ├── train_deephit.py
-│   ├── train_nfg.py
-│   ├── train.py
-│   ├── tune_optuna_optimized.py
-│   └── tune_optuna.py
+    ├── __init__.py
+    ├── calibration.py
+    ├── discrimination.py
+    └── ipcw.py
 └── utils
     ├── __init__.py
     ├── loss.py
     ├── plotting.py
     └── risk_cif.py
 
+results
+├── best_params                                  #Best parameters for dataset and model combination.
+    ├── best_params_framingham_deephit.yaml
+    ├── best_params_framingham.yaml
+    ├── best_params_pbc_deephit.yaml
+    ├── best_params_pbc.yaml
+    ├── best_params_support.yaml
+    ├── best_params_support2_deephit.yaml
+    ├── best_params_synthetic_deephit.yaml
+    └── best_params_synthetic.yaml
+├── plots
+    ├── feature_importance_risk_new_1_framingham.png
+    ├── feature_importance_risk_new_2_framingham.png
+    ├── shape_functions_top_features_risk1_framingham.png
+    └── shape_functions_top_features_risk2_framingham.png
+
+datasets                                        #Directory with csv files
+│   ├── framingham.csv
+│   ├── metabric
+│   │   ├── cleaned_features_final.csv
+│   │   └── label.csv
+│   ├── pbc2.csv
+│   ├── support2.csv
+│   ├── synthetic_comprisk.csv
+
+├── training_scripts                        #Training Scripts
+│   ├── config.yaml
+│   ├── model_utils.py
+│   ├── train_deephit_cuda.py
+│   ├── train_deephit.py
+│   ├── train_nfg.py
+│   ├── train.py
+│   ├── tune_optuna_optimized.py
+│   └── tune_optuna.py
 ```
 
-## Getting Started
+## Install from source
+
+1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/crisp-nam.git
+git clone git@github.com:VectorInstitute/crisp-nam.git
+```
 
+2. Install 
+
+via `pip`
+
+```bash
 cd crisp-nam
-# Add setup or installation instructions here
-## Setting Up Python Dependencies
-
-We recommend using [uv](https://github.com/astral-sh/uv) for fast dependency management:
-
+pip install -e
+```
+via `uv`
 ```bash
-# Install uv if you don't have it
-pip install uv
-
-# Create a virtual environment
-uv venv .venv
-
-# Activate the virtual environment
-source .venv/bin/activate
-
-# Install dependencies from pyproject.toml
-uv pip install -r pyproject.toml
+cd crisp-nam
+uv sync
 ```
 
-## Usage
+## Running training scripts
 
-To run examples:
+1. Modify training parameters in `training_scripts/train.py` 
+   OR
+   Run either of following commands to see CLI arguments for passing training parameters:
 
-```
-python -m train.train --dataset framingham
+   ```bash
+   python training_scripts/train.py --help
+   ```
 
-```
+   ```bash
+   uv run training_scripts/train.py --help
+   ```
 
+2. Run the training script
+
+   via `python` 
+   ```bash
+   source .venv/bin/activate
+   python training_scripts/train.py --dataset framingham
+   ```
+
+   via `uv`
+   ```bash
+   uv run training_scripts/train.py --dataset framingham
+   ```
+
+> [!NOTE]
+> For `uv` installation, please visit follow instructions in their [official page](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## Contributing
 
