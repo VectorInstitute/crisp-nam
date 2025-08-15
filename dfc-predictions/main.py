@@ -100,6 +100,20 @@ roc = risk_regression.plotROC(score_result,
 
 grdevices.dev_off()
 
+grdevices.png(file="plots/caliberation.png", width=500, height=600)
+params  = { 'method' : "nne",
+            'xlim': ro.FloatVector([0, 0.05]),
+            'round': ro.BoolVector([False]),
+            'ylim' : ro.FloatVector([0, 0.05]),
+            'rug' : ro.BoolVector([True])
+        }
+  
+
+caliberation_plot = risk_regression.plotCalibration(score_result,
+                                                        **params)
+grdevices.dev_off()
+
+
 ####### CRISP-NAM Metrics #########
 data_pd, score = pd.DataFrame(), pd.DataFrame()
 r_score_result_df = ro.DataFrame(score_result)
