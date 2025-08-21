@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 
 class FeatureNet(nn.Module):
     """
@@ -63,18 +64,47 @@ class FeatureNet(nn.Module):
             self.train()
         return result
 
+class L2NormalizedLinear(nn.Module):
+    """
+    Linear layer with L2 normalized weights (unit norm constraint)
+    """
+    def __init__(self, in_features, out_features, bias=False, eps=1e-8):
+        super(L2NormalizedLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.eps = eps
+        self.weight = nn.Parameter(torch.randn(out_features, in_features))
+        if bias:
+            self.bias = nn.Parameter(torch.randn(out_features))
+        else:
+            self.register_parameter('bias', None)
+            
+    def forward(self, x):
+        # L2 normalize weights to unit norm
+        normalized_weight = F.normalize(self.weight, p=2, dim=1, eps=self.eps)
+        return F.linear(x, normalized_weight, self.bias)
+    
+    def get_normalized_weights(self):
+        """Return the L2 normalized weights (useful for inspection)"""
+        with torch.no_grad():
+            return F.normalize(self.weight, p=2, dim=1, eps=self.eps)
+
 class CrispNamModel(nn.Module):
     """
-    Competing risks CoxNAM that models multiple event types.
+    Competing risks CoxNAM with L2 normalized projection weights.
     Each feature contributes to each risk through a separate shape function.
+    All projection weights are constrained to unit L2 norm.
     """
     def __init__(self, num_features, num_competing_risks, hidden_sizes=[64, 64],
-                 dropout_rate=0.1, feature_dropout=0.1, batch_norm=False):
+                 dropout_rate=0.1, feature_dropout=0.1, batch_norm=False, 
+                 normalize_projections=True, eps=1e-8):
         super(CrispNamModel, self).__init__()
         self.num_features = num_features
         self.num_competing_risks = num_competing_risks
         self.batch_norm = batch_norm
         self.feature_dropout = feature_dropout
+        self.normalize_projections = normalize_projections
+        self.eps = eps
         
         # Create a FeatureNet for each input feature
         self.feature_nets = nn.ModuleList([
@@ -83,13 +113,23 @@ class CrispNamModel(nn.Module):
         ])
         
         # For each feature and risk type, create a projection layer
-        self.risk_projections = nn.ModuleList([
-            nn.ModuleList([
-                nn.Linear(hidden_sizes[-1], 1, bias=False) 
-                for _ in range(num_competing_risks)
+        if normalize_projections:
+            self.risk_projections = nn.ModuleList([
+                nn.ModuleList([
+                    L2NormalizedLinear(hidden_sizes[-1], 1, bias=False, eps=eps) 
+                    for _ in range(num_competing_risks)
+                ])
+                for _ in range(num_features)
             ])
-            for _ in range(num_features)
-        ])
+        else:
+            # Fallback to standard linear layers
+            self.risk_projections = nn.ModuleList([
+                nn.ModuleList([
+                    nn.Linear(hidden_sizes[-1], 1, bias=False) 
+                    for _ in range(num_competing_risks)
+                ])
+                for _ in range(num_features)
+            ])
 
     def forward(self, x):
         """
@@ -116,16 +156,16 @@ class CrispNamModel(nn.Module):
         combined = torch.zeros(batch_size, self.num_competing_risks, device=device)
         feature_outputs = []
 
-        # loop features (unchanged architecture)
+        # loop features
         for feat_idx, fnet in enumerate(self.feature_nets):
             # take one column and get repr
             col = x[:, feat_idx].unsqueeze(1)            # [batch,1]
             repr = fnet(col)                              # [batch, hidden]
             feature_outputs.append(repr)
 
-            # project into each risk channel
+            # project into each risk channel with L2 normalized weights
             for risk_idx, proj in enumerate(self.risk_projections[feat_idx]):
-                # proj(repr) -> [batch,1], .view(-1) -> [batch]
+                # proj automatically applies L2 normalization if normalize_projections=True
                 combined[:, risk_idx] += proj(repr).view(-1)
 
         # split back into list of [batch,1]
@@ -135,8 +175,6 @@ class CrispNamModel(nn.Module):
         ]
 
         return risk_scores, feature_outputs
-        
-    
         
     def get_shape_functions(self, x_values, feature_idx, risk_idx=None, normalize=True):
         """
@@ -153,14 +191,12 @@ class CrispNamModel(nn.Module):
         """
         self.eval()  
         
-        
         if not isinstance(x_values, torch.Tensor):
             x_values = torch.FloatTensor(x_values)
         
         x_vals = x_values.view(-1, 1)
         
         with torch.no_grad():
-            
             feature_repr = self.feature_nets[feature_idx](x_vals)
             
             shape_funcs = {}
@@ -169,7 +205,7 @@ class CrispNamModel(nn.Module):
             risk_indices = [risk_idx] if risk_idx is not None else range(self.num_competing_risks)
             
             for j in risk_indices:
-                # Apply the projection to get shape function values
+                # Apply the L2 normalized projection to get shape function values
                 values = self.risk_projections[feature_idx][j](feature_repr).cpu().numpy().flatten()
                 
                 # Normalize if requested
@@ -180,10 +216,55 @@ class CrispNamModel(nn.Module):
                 
         return shape_funcs
     
+    def get_projection_norms(self):
+        """
+        Get the L2 norms of all projection weights (should be ~1.0 if normalized)
+        
+        Returns:
+            Dictionary of weight norms by feature and risk
+        """
+        norms = {}
+        
+        for feat_idx in range(self.num_features):
+            for risk_idx in range(self.num_competing_risks):
+                proj = self.risk_projections[feat_idx][risk_idx]
+                
+                if hasattr(proj, 'weight'):
+                    weight_norm = proj.weight.norm(p=2, dim=1).item()
+                    norms[f'feature_{feat_idx}_risk_{risk_idx}'] = weight_norm
+                    
+        return norms
+    
+    def get_normalized_projection_weights(self):
+        """
+        Get the actual L2 normalized weights used in computation
+        
+        Returns:
+            Dictionary of normalized weights
+        """
+        normalized_weights = {}
+        
+        for feat_idx in range(self.num_features):
+            for risk_idx in range(self.num_competing_risks):
+                proj = self.risk_projections[feat_idx][risk_idx]
+                
+                if hasattr(proj, 'get_normalized_weights'):
+                    # L2NormalizedLinear layer
+                    weights = proj.get_normalized_weights().detach().cpu().numpy()
+                elif hasattr(proj, 'weight'):
+                    # Standard linear layer - normalize manually
+                    weights = F.normalize(proj.weight, p=2, dim=1).detach().cpu().numpy()
+                else:
+                    weights = None
+                    
+                normalized_weights[f'feature_{feat_idx}_risk_{risk_idx}'] = weights
+                    
+        return normalized_weights
+    
     def calculate_feature_importance(self, x_data, feature_idx=None):
         """
-        Calculate feature importance based on the magnitude of risk-specific projection weights
-        and shape function outputs
+        Calculate feature importance based on the magnitude of risk-specific projection outputs
+        With L2 normalized weights, this gives a fair comparison across features
         
         Args:
             x_data: Input data tensor or numpy array
@@ -212,11 +293,11 @@ class CrispNamModel(nn.Module):
                 feature_repr = self.feature_nets[i](feature_values)
                 
                 # Calculate importance for each risk (mean absolute value)
-            for j in range(self.num_competing_risks):
-                # Apply the risk-specific projection
-                risk_specific_output = self.risk_projections[i][j](feature_repr)
-                abs_values = torch.abs(risk_specific_output).cpu().numpy()
-                importance[f'risk_{j+1}'][f'feature_{i}'] = float(np.mean(abs_values))
+                # With L2 normalized weights, this is directly comparable across features
+                for j in range(self.num_competing_risks):
+                    risk_specific_output = self.risk_projections[i][j](feature_repr)
+                    abs_values = torch.abs(risk_specific_output).cpu().numpy()
+                    importance[f'risk_{j+1}'][f'feature_{i}'] = float(np.mean(abs_values))
                                     
         return importance
     
@@ -269,3 +350,146 @@ class CrispNamModel(nn.Module):
             else:
                 # Without baseline hazards, just return hazard ratios
                 return {f'risk_{j+1}_hazard_ratio': hazard_ratios[j] for j in range(self.num_competing_risks)}
+
+# Alternative implementation using manual normalization in forward pass
+class CrispNamModelManualL2(nn.Module):
+    """
+    Alternative implementation with manual L2 normalization in forward pass
+    """
+    def __init__(self, num_features, num_competing_risks, hidden_sizes=[64, 64],
+                 dropout_rate=0.1, feature_dropout=0.1, batch_norm=False, eps=1e-8):
+        super(CrispNamModelManualL2, self).__init__()
+        self.num_features = num_features
+        self.num_competing_risks = num_competing_risks
+        self.batch_norm = batch_norm
+        self.feature_dropout = feature_dropout
+        self.eps = eps
+        
+        # Create a FeatureNet for each input feature
+        self.feature_nets = nn.ModuleList([
+            FeatureNet(hidden_sizes, dropout_rate, feature_dropout, batch_norm) 
+            for _ in range(num_features)
+        ])
+        
+        # Standard linear layers - weights will be L2 normalized in forward pass
+        self.risk_projections = nn.ModuleList([
+            nn.ModuleList([
+                nn.Linear(hidden_sizes[-1], 1, bias=False) 
+                for _ in range(num_competing_risks)
+            ])
+            for _ in range(num_features)
+        ])
+
+    def forward(self, x):
+        """Forward pass with manual L2 weight normalization"""
+        x = x.to(dtype=torch.float32)
+        batch_size, _ = x.shape
+        device = x.device
+
+        if self.training and self.feature_dropout > 0:
+            mask = torch.empty_like(x).bernoulli_(1.0 - self.feature_dropout)
+            x = x * mask
+
+        combined = torch.zeros(batch_size, self.num_competing_risks, device=device)
+        feature_outputs = []
+
+        for feat_idx, fnet in enumerate(self.feature_nets):
+            col = x[:, feat_idx].unsqueeze(1)
+            repr = fnet(col)
+            feature_outputs.append(repr)
+
+            for risk_idx, proj in enumerate(self.risk_projections[feat_idx]):
+                # L2 normalize weights manually
+                normalized_weight = F.normalize(proj.weight, p=2, dim=1, eps=self.eps)
+                # Apply normalized projection
+                output = F.linear(repr, normalized_weight, proj.bias)
+                combined[:, risk_idx] += output.view(-1)
+
+        risk_scores = [
+            combined[:, r].unsqueeze(1) 
+            for r in range(self.num_competing_risks)
+        ]
+
+        return risk_scores, feature_outputs
+
+# Utility functions for model analysis
+def analyze_projection_weights(model):
+    """
+    Analyze the L2 norms and statistics of projection weights
+    """
+    print("Projection Weight Analysis:")
+    print("=" * 50)
+    
+    # Get weight norms
+    norms = model.get_projection_norms()
+    norm_values = list(norms.values())
+    
+    print(f"Weight L2 Norms (should be ~1.0):")
+    print(f"  Mean: {np.mean(norm_values):.6f}")
+    print(f"  Std:  {np.std(norm_values):.6f}")
+    print(f"  Min:  {np.min(norm_values):.6f}")
+    print(f"  Max:  {np.max(norm_values):.6f}")
+    
+    # Show some individual norms
+    print(f"\nSample individual norms:")
+    for i, (name, norm) in enumerate(list(norms.items())[:6]):
+        print(f"  {name}: {norm:.6f}")
+    
+    return norms
+
+def compare_feature_importance_fairness(model, x_data):
+    """
+    Compare feature importance when weights are L2 normalized vs not normalized
+    """
+    print("\nFeature Importance Comparison:")
+    print("=" * 50)
+    
+    # Calculate importance with current model (L2 normalized)
+    importance_normalized = model.calculate_feature_importance(x_data)
+    
+    # Create equivalent model without normalization for comparison
+    model_unnorm = CrispNamModel(
+        model.num_features, 
+        model.num_competing_risks,
+        normalize_projections=False
+    )
+    
+    # Copy weights from normalized model
+    with torch.no_grad():
+        for i in range(model.num_features):
+            for j in range(model.num_competing_risks):
+                model_unnorm.risk_projections[i][j].weight.copy_(
+                    model.risk_projections[i][j].weight
+                )
+    
+    importance_unnorm = model_unnorm.calculate_feature_importance(x_data)
+    
+    print("Importance comparison (Risk 1):")
+    for feat in range(min(5, model.num_features)):  # Show first 5 features
+        norm_imp = importance_normalized['risk_1'].get(f'feature_{feat}', 0)
+        unnorm_imp = importance_unnorm['risk_1'].get(f'feature_{feat}', 0)
+        print(f"  Feature {feat}: Normalized={norm_imp:.4f}, Unnormalized={unnorm_imp:.4f}")
+
+# Example usage and testing
+if __name__ == "__main__":
+    # Create model with L2 normalized projections
+    model = CrispNamModel(
+        num_features=5, 
+        num_competing_risks=3,
+        hidden_sizes=[32, 32],
+        normalize_projections=True
+    )
+    
+    # Generate some test data
+    torch.manual_seed(42)
+    test_data = torch.randn(100, 5)
+    
+    # Test forward pass
+    risk_scores, feature_outputs = model(test_data)
+    print(f"Risk scores shapes: {[score.shape for score in risk_scores]}")
+    
+    # Analyze projection weights
+    analyze_projection_weights(model)
+    
+    # Compare feature importance
+    compare_feature_importance_fairness(model, test_data)
