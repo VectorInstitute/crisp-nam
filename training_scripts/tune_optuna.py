@@ -1,5 +1,6 @@
 import yaml  
 import configargparse
+from collections import defaultdict
 
 import optuna
 import torch
@@ -8,6 +9,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sksurv.util import Surv
+from sksurv.metrics import concordance_index_ipcw, cumulative_dynamic_auc, brier_score
 
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
@@ -377,17 +380,7 @@ def main():
     else:
         raise ValueError(f"Dataset {args.dataset} not supported")
     
-    # Scale the data
-    if args.scaling.lower() == "standard":
-        scaler = StandardScaler()
-        x[:, -n_cont:] = scaler.fit_transform(x[:, -n_cont:])
-    elif args.scaling.lower() == "minmax":
-        scaler = MinMaxScaler()
-        x[:, -n_cont:] = scaler.fit_transform(x[:, -n_cont:])
-    elif args.scaling.lower() == "none":
-        pass
-    else:
-        raise ValueError(f"Scaling method {args.scaling} not supported")
+    # Note: Scaling will be done after train/validation split to prevent data leakage
 
     # Compute number of competing risks
     num_competing_risks = len(np.unique(e)) - 1  # Excluding censoring (0)
@@ -400,6 +393,20 @@ def main():
     x_train, x_val, t_train, t_val, e_train, e_val = train_test_split(
         x, t, e, test_size=0.2, random_state=args.seed, stratify=e
     )
+    
+    # Apply scaling after split to prevent data leakage
+    if args.scaling.lower() == "standard":
+        scaler = StandardScaler()
+        x_train[:, -n_cont:] = scaler.fit_transform(x_train[:, -n_cont:])
+        x_val[:, -n_cont:] = scaler.transform(x_val[:, -n_cont:])
+    elif args.scaling.lower() == "minmax":
+        scaler = MinMaxScaler()
+        x_train[:, -n_cont:] = scaler.fit_transform(x_train[:, -n_cont:])
+        x_val[:, -n_cont:] = scaler.transform(x_val[:, -n_cont:])
+    elif args.scaling.lower() == "none":
+        pass
+    else:
+        raise ValueError(f"Scaling method {args.scaling} not supported")
     
     # Initialize event weights
     event_weights = None
