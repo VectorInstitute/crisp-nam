@@ -1,0 +1,39 @@
+batch_norm: '0.6'
+batch_size: 512
+dataset: synthetic
+dropout_rate: !!python/object/apply:numpy._core.multiarray.scalar
+- &id001 !!python/object/apply:numpy.dtype
+  args:
+  - f8
+  - false
+  - true
+  state: !!python/tuple
+  - 3
+  - <
+  - null
+  - null
+  - null
+  - -1
+  - -1
+  - 0
+- !!binary |
+  9pUiRhXP0j8=
+event_weighting: balanced
+feature_dropout: !!python/object/apply:numpy._core.multiarray.scalar
+- *id001
+- !!binary |
+  SL6pwAF30z8=
+hidden_dimensions: '36.8'
+l2_reg: !!python/object/apply:numpy._core.multiarray.scalar
+- *id001
+- !!binary |
+  plmNeKGEbT8=
+learning_rate: !!python/object/apply:numpy._core.multiarray.scalar
+- *id001
+- !!binary |
+  hn6uJpv4Zj8=
+n_folds: 5
+num_epochs: 250
+patience: 10
+scaling: standard
+seed: 42

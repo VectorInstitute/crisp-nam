@@ -46,9 +46,9 @@ def parse_args():
                       choices=["minmax", "standard", "none"],
                       help="Data scaling method for continuous features")
 
-    parser.add_argument("--num_epochs", type=int, default=100, 
+    parser.add_argument("--num_epochs", type=int, default=250, 
                       help="Number of training epochs (reduced for nested CV)")
-    parser.add_argument("--batch_size", type=int, default=256, 
+    parser.add_argument("--batch_size", type=int, default=512, 
                       help="Batch size for training")
     parser.add_argument("--patience", type=int, default=10, 
                       help="Patience for early stopping")
@@ -154,12 +154,12 @@ def hyperparameter_optimization(x_train_inner, t_train_inner, e_train_inner,
         l2_reg = trial.suggest_float('l2_reg', 1e-5, 1e-1, log=True)
         dropout_rate = trial.suggest_float('dropout_rate', 0.0, 0.8)
         feature_dropout = trial.suggest_float('feature_dropout', 0.0, 0.5)
-        
+
         # Hidden dimensions
         n_layers = trial.suggest_int('n_layers', 1, 3)
         hidden_dimensions = []
         for i in range(n_layers):
-            hidden_dimensions.append(trial.suggest_categorical(f'hidden_dim_{i}', [32, 64, 128, 256]))
+            hidden_dimensions.append(trial.suggest_categorical(f'hidden_dim_{i}', [8,16, 32, 64, 128]))
         
         batch_norm = trial.suggest_categorical('batch_norm', [True, False])
         

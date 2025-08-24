@@ -54,7 +54,7 @@ def load_support_dataset():
     x_cont = data[cont_cols]
     
     if x_cont.isnull().values.any():
-        simp_imputer = SimpleImputer(strategy='median')
+        simp_imputer = SimpleImputer(strategy='most_frequent') #originally was median
         x_cont_imputed = simp_imputer.fit_transform(x_cont)
     else:
         x_cont_imputed = x_cont.values
