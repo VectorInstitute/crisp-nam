@@ -517,7 +517,7 @@ def main():
             n_bottom=5,  # Show top 5 negative contributors
             risk_idx=risk,  
             figsize=(6, 4),
-            output_file=f"figs/nested_cv_feature_importance_risk_{risk}_{args.dataset}.png"
+            output_file=f"results/plots/nested_cv_feature_importance_risk_{risk}_{args.dataset}.png"
         )
         
         # Get top features for shape function plots
@@ -532,11 +532,11 @@ def main():
             top_features=top_features,    
             ncols=5,
             figsize=(12, 6),
-            output_file=f"figs/nested_cv_shape_functions_risk_{risk}_{args.dataset}.png"
+            output_file=f"results/plots/nested_cv_shape_functions_risk_{risk}_{args.dataset}.png"
         )
         plt.close(fig)
     
-    print(f"Shape function plots saved to figs/ directory")
+    print(f"Shape function plots saved to results/plots/ directory")
     
     # Save metrics to files
     print("\n=== Saving Metrics to Files ===")
