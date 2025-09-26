@@ -385,16 +385,7 @@ def main():
         raise ValueError(f"Dataset {args.dataset} not supported")
     
     
-    if args.scaling.lower() == "standard":
-        scaler = StandardScaler()
-        x[:, -n_cont:] = scaler.fit_transform(x[:, -n_cont:])
-    elif args.scaling.lower() == "minmax":
-        scaler = MinMaxScaler()
-        x[:, -n_cont:] = scaler.fit_transform(x[:, -n_cont:])
-    elif args.scaling.lower() == "none":
-        pass
-    else:
-        raise ValueError(f"Scaling method {args.scaling} not supported")
+    # Note: Scaling will be done inside cross-validation loop to prevent data leakage
 
     # Compute weights based on event distribution
     num_competing_risks = len(np.unique(e)) - 1  # Excluding censoring (0)
@@ -434,7 +425,6 @@ def main():
         
         event_weights = torch.tensor(event_weights, dtype=torch.float32, device=device)
 
-    dataset = SurvivalDataset(x, t, e)
     skf = StratifiedKFold(n_splits=args.n_folds, shuffle=True, random_state=args.seed)
 
     all_metrics = defaultdict(list)
@@ -455,13 +445,32 @@ def main():
     for fold, (train_idx, val_idx) in enumerate(skf.split(x, e)):
         print(f"\n=== Fold {fold + 1}/{args.n_folds} ===")
 
+        # Split data for this fold
+        x_train, x_val = x[train_idx].copy(), x[val_idx].copy()
+        t_train, t_val = t[train_idx], t[val_idx]
+        e_train, e_val = e[train_idx], e[val_idx]
+
+        # Apply scaling within this fold to prevent data leakage
+        if args.scaling.lower() == "standard":
+            scaler = StandardScaler()
+            x_train[:, -n_cont:] = scaler.fit_transform(x_train[:, -n_cont:])
+            x_val[:, -n_cont:] = scaler.transform(x_val[:, -n_cont:])
+        elif args.scaling.lower() == "minmax":
+            scaler = MinMaxScaler()
+            x_train[:, -n_cont:] = scaler.fit_transform(x_train[:, -n_cont:])
+            x_val[:, -n_cont:] = scaler.transform(x_val[:, -n_cont:])
+        elif args.scaling.lower() == "none":
+            pass
+        else:
+            raise ValueError(f"Scaling method {args.scaling} not supported")
+
         # Calculate fold-specific weights if using balanced weighting
         fold_event_weights = event_weights
         if args.event_weighting == "balanced":
             # Recalculate weights based on training set for this fold
             fold_event_counts = np.zeros(num_competing_risks)
             for k in range(1, num_competing_risks + 1):
-                fold_event_counts[k-1] = np.sum(e[train_idx] == k)
+                fold_event_counts[k-1] = np.sum(e_train == k)
             
             # Avoid division by zero
             fold_event_counts = np.maximum(fold_event_counts, 1)
@@ -475,8 +484,12 @@ def main():
             
             print(f"Fold {fold+1} event weights: {fold_event_weights.cpu().numpy()}")
 
-        train_loader = DataLoader(Subset(dataset, train_idx), batch_size=args.batch_size, shuffle=True)
-        val_loader = DataLoader(Subset(dataset, val_idx), batch_size=args.batch_size)
+        # Create datasets with properly normalized data
+        train_dataset = SurvivalDataset(x_train, t_train, e_train)
+        val_dataset = SurvivalDataset(x_val, t_val, e_val)
+        
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size)
 
         model = CrispNamModel(
             num_features=x.shape[1],
@@ -497,14 +510,14 @@ def main():
                     verbose=True)
         
         # Calculate baseline CIFs using the same eval times for all folds
-        baseline_cifs = {k: compute_baseline_cif(t[train_idx], e[train_idx], eval_times, k + 1) 
+        baseline_cifs = {k: compute_baseline_cif(t_train, e_train, eval_times, k + 1) 
                         for k in range(num_competing_risks)}
 
-        abs_risks = predict_absolute_risk(model, x[val_idx], baseline_cifs, eval_times, device=device)
+        abs_risks = predict_absolute_risk(model, x_val, baseline_cifs, eval_times, device=device)
         
         
-        fold_metrics = evaluate_model(model, x[val_idx], t[val_idx], e[val_idx],
-                                      t[train_idx], e[train_idx], abs_risks, eval_times)
+        fold_metrics = evaluate_model(model, x_val, t_val, e_val,
+                                      t_train, e_train, abs_risks, eval_times)
         
         for k, v in fold_metrics.items():
             all_metrics[k].extend(v)
@@ -524,8 +537,8 @@ def main():
             model=model,
             x_data=x,
             feature_names=feature_names,
-            n_top=5,  # Show top 4 positive contributors
-            n_bottom=5,  # Show top 4 negative contributors
+            n_top=5,  # Show top 5 positive contributors
+            n_bottom=5,  # Show top 5 negative contributors
             risk_idx=risk,  
             figsize=(6, 4),
             output_file=f"figs/feature_importance_risk_new_{risk}_{args.dataset}.png"
