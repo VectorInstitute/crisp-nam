@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRISP-NAM Architecture</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: transparent;
+      overflow-x: auto;
+    }
+    
+    svg {
+      display: block;
+      margin: 0 auto;
+    }
+    
+    .node-feature { fill: #bbdefb; stroke: #1976d2; stroke-width: 2; }
+    .node-featurenet { fill: #c8e6c9; stroke: #388e3c; stroke-width: 2; }
+    .node-representation { fill: #ffe0b2; stroke: #f57c00; stroke-width: 2; }
+    .node-projection-risk1 { fill: #bbdefb; stroke: #1976d2; stroke-width: 1.5; }
+    .node-projection-risk2 { fill: #ffcdd2; stroke: #c62828; stroke-width: 1.5; }
+    .node-sum { fill: #e0e0e0; stroke: #424242; stroke-width: 2; }
+    .node-agg { fill: #e0e0e0; stroke: #616161; stroke-width: 2; }
+    .node-risk1 { fill: #bbdefb; stroke: #1976d2; stroke-width: 2; }
+    .node-risk2 { fill: #ffcdd2; stroke: #c62828; stroke-width: 2; }
+    .node-hazard-box { fill: #fff9c4; stroke: #f9a825; stroke-width: 2; }
+    .node-baseline1 { fill: #bbdefb; stroke: #1976d2; stroke-width: 2; }
+    .node-baseline2 { fill: #ffcdd2; stroke: #c62828; stroke-width: 2; }
+    .node-formula { fill: white; stroke: #9e9e9e; stroke-width: 1.5; }
+    
+    .link-default { stroke: #424242; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .link-risk1 { stroke: #1976d2; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead-risk1); }
+    .link-risk2 { stroke: #c62828; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead-risk2); }
+    .link-dashed { stroke: #757575; stroke-width: 2; stroke-dasharray: 5,5; fill: none; marker-end: url(#arrowhead); }
+    
+    text { font-size: 14px; fill: #212121; pointer-events: none; }
+    .title-text { font-size: 20px; font-weight: bold; }
+    .label-text { font-size: 16px; font-weight: bold; }
+    .small-text { font-size: 12px; }
+    .formula-text { font-size: 13px; }
+  </style>
+</head>
+<body>
+  <svg id="architecture" width="1400" height="1000"></svg>
+  
+  <script>
+    const svg = d3.select("#architecture");
+    const width = 1400;
+    const height = 1000;
+    
+    // Define arrow markers
+    svg.append("defs").selectAll("marker")
+      .data(["arrowhead", "arrowhead-risk1", "arrowhead-risk2"])
+      .enter().append("marker")
+      .attr("id", d => d)
+      .attr("viewBox", "0 -5 10 10")
+      .attr("refX", 10)
+      .attr("refY", 0)
+      .attr("markerWidth", 6)
+      .attr("markerHeight", 6)
+      .attr("orient", "auto")
+      .append("path")
+      .attr("d", "M0,-5L10,0L0,5")
+      .attr("fill", d => d === "arrowhead-risk1" ? "#1976d2" : d === "arrowhead-risk2" ? "#c62828" : "#424242");
+    
+    // Helper function to create rectangles
+    function createRect(x, y, width, height, className, text, textSize = "14px") {
+      const g = svg.append("g");
+      g.append("rect")
+        .attr("x", x)
+        .attr("y", y)
+        .attr("width", width)
+        .attr("height", height)
+        .attr("rx", 5)
+        .attr("class", className);
+      
+      g.append("text")
+        .attr("x", x + width/2)
+        .attr("y", y + height/2 + 5)
+        .attr("text-anchor", "middle")
+        .style("font-size", textSize)
+        .text(text);
+      
+      return {x: x + width/2, y: y + height/2};
+    }
+    
+    // Helper function to create circles
+    function createCircle(x, y, r, className, text) {
+      const g = svg.append("g");
+      g.append("circle")
+        .attr("cx", x)
+        .attr("cy", y)
+        .attr("r", r)
+        .attr("class", className);
+      
+      g.append("text")
+        .attr("x", x)
+        .attr("y", y + 5)
+        .attr("text-anchor", "middle")
+        .style("font-size", "20px")
+        .text(text);
+      
+      return {x, y};
+    }
+    
+    // Helper function to draw lines
+    function drawLine(x1, y1, x2, y2, className) {
+      svg.append("path")
+        .attr("d", `M${x1},${y1} L${x2},${y2}`)
+        .attr("class", className);
+    }
+    
+    // Title
+    svg.append("text")
+      .attr("x", width/2)
+      .attr("y", 30)
+      .attr("text-anchor", "middle")
+      .attr("class", "title-text")
+      .text("CRISP-NAM: Model Architecture");
+    
+    // Layer 1: Features
+    const f1 = createRect(50, 100, 100, 40, "node-feature", "x₁");
+    const f2 = createRect(50, 160, 100, 40, "node-feature", "x₂");
+    svg.append("text").attr("x", 100).attr("y", 220).attr("text-anchor", "middle").text("⋮");
+    const fp = createRect(50, 240, 100, 40, "node-feature", "xₚ");
+    
+    // Layer 2: FeatureNets
+    const fn1 = createRect(200, 100, 140, 40, "node-featurenet", "FeatureNet f₁", "12px");
+    const fn2 = createRect(200, 160, 140, 40, "node-featurenet", "FeatureNet f₂", "12px");
+    svg.append("text").attr("x", 270).attr("y", 220).attr("text-anchor", "middle").text("⋮");
+    const fnp = createRect(200, 240, 140, 40, "node-featurenet", "FeatureNet fₚ", "12px");
+    
+    // Layer 3: Representations
+    const h1 = createRect(390, 100, 70, 40, "node-representation", "h₁");
+    const h2 = createRect(390, 160, 70, 40, "node-representation", "h₂");
+    svg.append("text").attr("x", 425).attr("y", 220).attr("text-anchor", "middle").text("⋮");
+    const hp = createRect(390, 240, 70, 40, "node-representation", "hₚ");
+    
+    // Projections label
+    svg.append("text").attr("x", 600).attr("y", 75).attr("text-anchor", "middle")
+      .attr("class", "label-text").text("Projections");
+    
+    // Layer 4: Risk Projections
+    const g11 = createRect(520, 90, 140, 30, "node-projection-risk1", "g₁,₁(h₁)", "11px");
+    const g12 = createRect(520, 130, 140, 30, "node-projection-risk2", "g₁,₂(h₁)", "11px");
+    
+    const g21 = createRect(520, 150, 140, 30, "node-projection-risk1", "g₂,₁(h₂)", "11px");
+    const g22 = createRect(520, 190, 140, 30, "node-projection-risk2", "g₂,₂(h₂)", "11px");
+    
+    const gp1 = createRect(520, 230, 140, 30, "node-projection-risk1", "gₚ,₁(hₚ)", "11px");
+    const gp2 = createRect(520, 270, 140, 30, "node-projection-risk2", "gₚ,₂(hₚ)", "11px");
+    
+    // Layer 5: Sum nodes
+    const sum1 = createCircle(740, 110, 25, "node-sum", "+");
+    const sum2 = createCircle(740, 250, 25, "node-sum", "+");
+    
+    // Layer 6: Aggregators
+    const agg1 = createRect(810, 90, 140, 40, "node-agg", "Additive Agg", "11px");
+    const agg2 = createRect(810, 230, 140, 40, "node-agg", "Additive Agg", "11px");
+    
+    // Cause-specific log-hazard label
+    svg.append("text").attr("x", 1070).attr("y", 75).attr("text-anchor", "middle")
+      .attr("class", "label-text").text("Cause-specific log-hazard");
+    
+    // Layer 7: Risk scores
+    const eta1 = createRect(1000, 90, 90, 40, "node-risk1", "η₁(x)");
+    const eta2 = createRect(1000, 230, 90, 40, "node-risk2", "η₂(x)");
+    
+    // Formula
+    const formula = createRect(880, 350, 240, 35, "node-formula", "λₖ(t|x) = λ₀ₖ(t) · exp(ηₖ(x))", "12px");
+    
+    // Hazard section
+    svg.append("rect")
+      .attr("x", 50)
+      .attr("y", 450)
+      .attr("width", 1300)
+      .attr("height", 200)
+      .attr("rx", 5)
+      .attr("class", "node-hazard-box");
+    
+    svg.append("text").attr("x", 700).attr("y", 670).attr("text-anchor", "middle")
+      .attr("class", "label-text").text("Baseline Hazard Estimation & CIF Calculation");
+    
+    // Baseline hazards
+    const lambda01 = createRect(100, 500, 120, 40, "node-baseline1", "λ₀₁(t)");
+    const lambda02 = createRect(100, 580, 120, 40, "node-baseline2", "λ₀₂(t)");
+    
+    // Hazards
+    const lambda1 = createRect(280, 500, 120, 40, "node-baseline1", "λ₁(t|x)");
+    const lambda2 = createRect(280, 580, 120, 40, "node-baseline2", "λ₂(t|x)");
+    
+    // CIF formulas
+    const cif1f = createRect(480, 490, 380, 60, "node-formula", "F₁(t|x) = ∫₀ᵗ S(u|x)λ₁(u|x)du", "11px");
+    const cif2f = createRect(480, 570, 380, 60, "node-formula", "F₂(t|x) = ∫₀ᵗ S(u|x)λ₂(u|x)du", "11px");
+    
+    // Final CIFs
+    const F1 = createRect(920, 500, 120, 40, "node-baseline1", "F₁(t|x)");
+    const F2 = createRect(920, 580, 120, 40, "node-baseline2", "F₂(t|x)");
+    
+    // Draw connections - Layer 1 to 2
+    drawLine(f1.x, f1.y, fn1.x, fn1.y, "link-default");
+    drawLine(f2.x, f2.y, fn2.x, fn2.y, "link-default");
+    drawLine(fp.x, fp.y, fnp.x, fnp.y, "link-default");
+    
+    // Layer 2 to 3
+    drawLine(fn1.x, fn1.y, h1.x, h1.y, "link-default");
+    drawLine(fn2.x, fn2.y, h2.x, h2.y, "link-default");
+    drawLine(fnp.x, fnp.y, hp.x, hp.y, "link-default");
+    
+    // Layer 3 to 4 (projections)
+    drawLine(h1.x, h1.y, g11.x - 70, g11.y, "link-risk1");
+    drawLine(h1.x, h1.y, g12.x - 70, g12.y, "link-risk2");
+    drawLine(h2.x, h2.y, g21.x - 70, g21.y, "link-risk1");
+    drawLine(h2.x, h2.y, g22.x - 70, g22.y, "link-risk2");
+    drawLine(hp.x, hp.y, gp1.x - 70, gp1.y, "link-risk1");
+    drawLine(hp.x, hp.y, gp2.x - 70, gp2.y, "link-risk2");
+    
+    // Projections to sum
+    drawLine(g11.x + 70, g11.y, sum1.x - 25, sum1.y, "link-risk1");
+    drawLine(g21.x + 70, g21.y, sum1.x - 25, sum1.y, "link-risk1");
+    drawLine(gp1.x + 70, gp1.y, sum1.x - 25, sum1.y, "link-risk1");
+    
+    drawLine(g12.x + 70, g12.y, sum2.x - 25, sum2.y, "link-risk2");
+    drawLine(g22.x + 70, g22.y, sum2.x - 25, sum2.y, "link-risk2");
+    drawLine(gp2.x + 70, gp2.y, sum2.x - 25, sum2.y, "link-risk2");
+    
+    // Sum to aggregator
+    drawLine(sum1.x + 25, sum1.y, agg1.x - 70, agg1.y, "link-risk1");
+    drawLine(sum2.x + 25, sum2.y, agg2.x - 70, agg2.y, "link-risk2");
+    
+    // Aggregator to eta
+    drawLine(agg1.x + 70, agg1.y, eta1.x - 45, eta1.y, "link-risk1");
+    drawLine(agg2.x + 70, agg2.y, eta2.x - 45, eta2.y, "link-risk2");
+    
+    // Eta to formula (dashed)
+    svg.append("path")
+      .attr("d", `M${eta1.x + 45},${eta1.y} L${eta1.x + 100},${eta1.y} L${eta1.x + 100},${formula.y} L${formula.x},${formula.y}`)
+      .attr("class", "link-dashed");
+    
+    svg.append("path")
+      .attr("d", `M${eta2.x + 45},${eta2.y} L${eta2.x + 100},${eta2.y} L${eta2.x + 100},${formula.y} L${formula.x},${formula.y}`)
+      .attr("class", "link-dashed");
+    
+    // Formula to hazard box
+    drawLine(formula.x, formula.y + 17, formula.x, 450, "link-dashed");
+    
+    // Baseline to hazard
+    drawLine(lambda01.x + 60, lambda01.y, lambda1.x - 60, lambda1.y, "link-risk1");
+    drawLine(lambda02.x + 60, lambda02.y, lambda2.x - 60, lambda2.y, "link-risk2");
+    
+    // Hazard to CIF formula
+    drawLine(lambda1.x + 60, lambda1.y, cif1f.x - 190, cif1f.y, "link-risk1");
+    drawLine(lambda2.x + 60, lambda2.y, cif2f.x - 190, cif2f.y, "link-risk2");
+    
+    // CIF formula to F
+    drawLine(cif1f.x + 190, cif1f.y, F1.x - 60, F1.y, "link-risk1");
+    drawLine(cif2f.x + 190, cif2f.y, F2.x - 60, F2.y, "link-risk2");
+    
+  </script>
+</body>
+</html>
