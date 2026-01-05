@@ -239,3 +239,410 @@ a.figure-number:hover,
 a.section-number:hover {
     border-bottom-color: hsla(206, 90%, 20%, 0.6);
 }
+
+/* ****************************************
+ * Interactive Model Inference Component
+ ******************************************/
+.interactive-component {
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 30px;
+    margin: 40px 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.component-header h4 {
+    margin-top: 0;
+    color: #2c3e50;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.component-description {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+.model-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.control-group label {
+    font-weight: 600;
+    color: #34495e;
+    min-width: 120px;
+}
+
+.dataset-dropdown {
+    padding: 10px 15px;
+    border: 2px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s;
+    flex: 1;
+    max-width: 400px;
+}
+
+.dataset-dropdown:hover {
+    border-color: #3498db;
+}
+
+.dataset-dropdown:focus {
+    outline: none;
+    border-color: #2980b9;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.control-buttons {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.btn-secondary {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #229954;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+}
+
+.btn:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.status {
+    padding: 12px 20px;
+    border-radius: 6px;
+    margin: 15px 0;
+    font-weight: 500;
+    display: none;
+}
+
+.status.loading {
+    display: block;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.status.success {
+    display: block;
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status.error {
+    display: block;
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.dataset-info-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border-left: 4px solid #3498db;
+}
+
+.dataset-info-card h4 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.dataset-info-card p {
+    margin: 8px 0;
+    color: #555;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.feature-item {
+    background: white;
+    padding: 10px 15px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid #e0e0e0;
+}
+
+.feature-name {
+    font-weight: 600;
+    color: #34495e;
+    font-size: 13px;
+}
+
+.feature-value {
+    color: #3498db;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.input-features h4,
+.inference-results h4 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    margin-top: 25px;
+}
+
+.results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.risk-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.risk-header {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 16px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.risk-score {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e74c3c;
+    margin-bottom: 15px;
+    font-family: 'Courier New', monospace;
+}
+
+.risk-bar-container {
+    height: 12px;
+    background: #ecf0f1;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.risk-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    transition: width 0.5s ease;
+}
+
+.risk-bar-secondary {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+
+.risk-percentage {
+    font-size: 14px;
+    color: #7f8c8d;
+    font-weight: 600;
+}
+
+.results-note {
+    background: #e8f4f8;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #2c3e50;
+    border-left: 4px solid #3498db;
+}
+
+.results-note strong {
+    color: #2980b9;
+}
+
+.loading-text {
+    text-align: center;
+    padding: 40px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 20px;
+    border-radius: 6px;
+    border: 1px solid #f5c6cb;
+}
+
+/* Time-based predictions section */
+.log-hazard-section,
+.time-based-section {
+    margin: 30px 0;
+}
+
+.log-hazard-section h5,
+.time-based-section h5 {
+    color: #2c3e50;
+    font-size: 18px;
+    margin-bottom: 15px;
+    margin-top: 20px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 8px;
+}
+
+.risk-chart-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: center;
+}
+
+#risk-chart {
+    max-width: 100%;
+    height: auto;
+}
+
+.time-predictions-table {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+.predictions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.predictions-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.predictions-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 13px;
+}
+
+.predictions-table tbody tr {
+    border-bottom: 1px solid #e0e0e0;
+    transition: background-color 0.2s;
+}
+
+.predictions-table tbody tr:hover {
+    background-color: #f5f7fa;
+}
+
+.predictions-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.predictions-table td {
+    padding: 12px 15px;
+}
+
+.time-label {
+    font-weight: 600;
+    color: #34495e;
+}
+
+.risk-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.risk-value.risk-1 {
+    color: #3498db;
+}
+
+.risk-value.risk-2 {
+    color: #e74c3c;
+}
+
+/* Responsive chart */
+@media (max-width: 768px) {
+    .risk-chart-container {
+        padding: 10px;
+    }
+
+    #risk-chart {
+        width: 100%;
+    }
+
+    .predictions-table {
+        font-size: 12px;
+    }
+
+    .predictions-table th,
+    .predictions-table td {
+        padding: 8px 10px;
+    }
+}

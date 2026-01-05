@@ -1,5 +1,6 @@
 import configargparse
 from collections import defaultdict
+import os
 
 import torch
 import numpy as np
@@ -26,47 +27,70 @@ from crisp_nam.metrics import brier_score, auc_td
 from crisp_nam.utils import predict_absolute_risk, compute_baseline_cif
 from crisp_nam.utils import plot_coxnam_shape_functions, plot_feature_importance
 
+def save_best_model(model, dataset_name, save_dir="saved_models"):
+    """
+    Save the best model weights with a dataset-specific filename.
+
+    Args:
+        model: The trained PyTorch model to save
+        dataset_name: Name of the dataset (e.g., 'framingham', 'support', 'pbc', 'synthetic')
+        save_dir: Directory to save the model weights (default: 'saved_models')
+
+    Returns:
+        str: Path to the saved model file
+    """
+    os.makedirs(save_dir, exist_ok=True)
+
+    model_filename = f"{dataset_name}_model.pth"
+    model_path = os.path.join(save_dir, model_filename)
+
+    torch.save(model.state_dict(), model_path)
+    print(f"Model weights saved to: {model_path}")
+
+    return model_path
+
+
 def parse_args():
     parser = configargparse.ArgumentParser(
         description="Training script for MultiTaskCoxNAM model",
         default_config_files=["config.yml"],
         config_file_parser_class=configargparse.YAMLConfigFileParser
     )
-    
+
     parser.add_argument("-c", "--config", is_config_file=True,
                       help="Path to config file")
 
-    parser.add_argument("--dataset", type=str, default="framingham", 
+    parser.add_argument("--dataset", type=str, default="framingham",
                       help="Dataset to use: (framingham, support, pbc, synthetic)")
 
     parser.add_argument("--scaling", type=str, default="standard", choices=["minmax", "standard", "none"],
                       help="Data scaling method for continuous features")
 
-    parser.add_argument("--num_epochs", type=int, default=500, 
+    parser.add_argument("--num_epochs", type=int, default=500,
                       help="Number of training epochs")
-    parser.add_argument("--batch_size", type=int, default=256, 
+    parser.add_argument("--batch_size", type=int, default=256,
                       help="Batch size for training")
-    parser.add_argument("--learning_rate", type=float, default=1e-3, 
+    parser.add_argument("--learning_rate", type=float, default=1e-3,
                       help="Learning rate for optimizer")
-    parser.add_argument("--l2_reg", type=float, default=1e-3, 
+    parser.add_argument("--l2_reg", type=float, default=1e-3,
                       help="L2 regularization weight")
-    parser.add_argument("--patience", type=int, default=10, 
+    parser.add_argument("--patience", type=int, default=10,
                       help="Patience for early stopping")
 
-    parser.add_argument("--dropout_rate", type=float, default=0.5, 
+    parser.add_argument("--dropout_rate", type=float, default=0.5,
                       help="Dropout rate for model")
-    parser.add_argument("--feature_dropout", type=float, default=0.1, 
+    parser.add_argument("--feature_dropout", type=float, default=0.1,
                       help="Feature dropout rate")
-    parser.add_argument("--hidden_dimensions", type=str, default="64,64", 
+    parser.add_argument("--hidden_dimensions", type=str, default="64,64",
                       help="Hidden layer dimensions (comma-separated)")
     parser.add_argument("--batch_norm", type=str, default="False", choices=["True", "False"],
                       help="Whether to use batch normalization")
 
-    parser.add_argument("--seed", type=int, default=42, 
+    parser.add_argument("--seed", type=int, default=42,
                       help="Random seed for reproducibility")
-    parser.add_argument("--n_folds", type=int, default=5, 
+    parser.add_argument("--n_folds", type=int, default=5,
                       help="Number of folds for cross-validation")
-    
+
     return parser.parse_args()
 
 
@@ -522,41 +546,43 @@ def main():
         for k, v in fold_metrics.items():
             all_metrics[k].extend(v)
 
-    
+
     display_metrics_table(all_metrics, n_folds=args.n_folds)
-    
+
     #create figs subdirectory if not present
-    import os
     if not os.path.exists("figs"):
         os.makedirs("figs")
-        
+
 
     for risk in range(1, num_competing_risks + 1):
-    
+
         fig, _, top_positive, top_negative = plot_feature_importance(
             model=model,
             x_data=x,
             feature_names=feature_names,
             n_top=5,  # Show top 5 positive contributors
             n_bottom=5,  # Show top 5 negative contributors
-            risk_idx=risk,  
+            risk_idx=risk,
             figsize=(6, 4),
             output_file=f"figs/feature_importance_risk_new_{risk}_{args.dataset}.png"
             )
-    
+
         top_features = top_positive + top_negative
-        
+
         fig, axes = plot_coxnam_shape_functions(
             model=model,
-            X=x,  
+            X=x,
             risk_to_plot=risk,
-            feature_names=feature_names,  
-            top_features=top_features,    
+            feature_names=feature_names,
+            top_features=top_features,
             ncols=5,
             figsize=(12,6),
             output_file=f"figs/shape_functions_top_features_risk{risk}_{args.dataset}.png"
         )
         plt.close(fig)
+
+    # Save the best model weights
+    save_best_model(model, args.dataset)
 
 
 if __name__ == "__main__":

@@ -193,6 +193,39 @@
 
   <h2 id="interp">Interpretability</h2>
 
+  <h3>Interactive Model Demo</h3>
+  <p>Try the CRISP-NAM model yourself! Select a dataset, load the trained model, and run inference directly in your browser using ONNX.js.</p>
+
+  <div id="model-inference-component" class="interactive-component">
+    <div class="component-header">
+      <h4>CRISP-NAM Model Inference</h4>
+      <p class="component-description">This interactive demo allows you to load a trained CRISP-NAM model and perform real-time risk predictions.</p>
+    </div>
+
+    <div class="model-controls">
+      <div class="control-group">
+        <label for="dataset-select">Select Dataset:</label>
+        <select id="dataset-select" class="dataset-dropdown">
+          <option value="framingham">Framingham Heart Study</option>
+        </select>
+      </div>
+
+      <div class="control-buttons">
+        <button id="load-model-btn" class="btn btn-primary">Load Model</button>
+        <button id="run-inference-btn" class="btn btn-secondary" disabled>Run Inference</button>
+        <div id="loading-spinner" class="spinner" style="display: none;"></div>
+      </div>
+    </div>
+
+    <div id="model-status" class="status"></div>
+
+    <div id="dataset-info" class="dataset-info"></div>
+
+    <div id="input-features" class="input-features"></div>
+
+    <div id="inference-results" class="inference-results"></div>
+  </div>
+
   <h2 id="conclusion">Conclusion</h2>
   <p>Conclusion on the project contributions</p>
 </d-article>
