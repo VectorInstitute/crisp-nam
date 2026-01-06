@@ -25,6 +25,15 @@ d-figure>figure {
     margin-bottom: 0;
 }
 
+/* Figcaption styling */
+figure figcaption {
+    text-align: center !important;
+    margin-top: 10px;
+    font-style: italic;
+    color: #666;
+    font-size: 14px;
+}
+
 /* Layout classes */
 .l-screen {
   grid-column: screen;
