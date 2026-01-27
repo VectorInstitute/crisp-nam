@@ -61,15 +61,21 @@
     </a>
         <ul>
           <li><a href="#challenges">Challenges</a></li>
-          <li><a href="#surv">Survival Analysis: A primer</a></li>
+          <li><a href="#surv">Survival Analysis: A primer</a>
+            <ul>
+                <li><a href="#competing-risks">Competing risks: Multiple causes for the same outcome</a></li>
+            </ul>
+          </li>
           <li><a href="#existing-models">Existing Models</a></li>
           <li><a href="#limitations">Limitations of existing approaches</a></li>
         </ul>
       </div>
       <div class="toc-section"><a href="#crisp-nam">Our solution: CRISP-NAM</a>
         <ul>
+          <li><a href="#inspiration">Inspiration of CRISP-NAM</a></li>
           <li><a href="#architecture">Architecture</a></li>
           <li><a href="#advantages">Advantages</a></li>
+          <li><a href="#limitations">Limitations</a></li>
         </ul>
       </div>
       <div class="toc-section"><a href="#Evaluation"> Evaluation</a>
@@ -98,17 +104,39 @@
 
         <li><strong>Regulatory frameworks</strong>: Many policies have established explainability and interpretability constraints for high-risk AI systems. As an example, the Food and Drug Administration (FDA) guidance requires clear documentation of AI/ML medical device decision-making.</li>
     
-    </ul>
-    These challenges remain in many areas, including healthcare. However, our focus in this blog will be on developing interpretable techniques for survival analysis use cases. It is a robust framework for providing time-to-event prediction across multiple disciplines such as finance, manufacturing, and healthcare.
+    </ul>Our focus in this blog will be on developing <b>interpretable</b>techniques for survival analysis use cases. It is a robust framework for providing time-to-event predictions, especially in healthcare.
   </p>
 
   <h3 id="surv">Survival Analysis: Primer</h3>
 
-  <p>Survival analysis is a collection of statistical procedures for data analysis where the outcome is time-to-event, meaning time until an event of interest occurs. For example, clinicians utilize patient data (covariates) to predict the timing of hospital readmissions for specific medical conditions. There can be multiple outcomes  (such as cardiovascular risk, death, etc.) associated with patient data, and multiple mutually exclusive events can lead to these outcomes. These outcomes are referred to as competing risks. Survival modelling learns functions to map a patient’s data (covariates) to the time of occurrence of a single outcome (time-to-event).</p>
+  <p>Survival analysis is a collection of statistical procedures for data analysis where the outcome is time-to-event, meaning time until an event of interest occurs. For example, clinicians utilize patient data <i>(covariates)</i> to predict the timing of hospital readmissions for specific medical conditions. There can be multiple outcomes  (such as cardiovascular risk, death, etc.) associated with patient data, and multiple mutually exclusive events that can lead to any outcome. These outcomes are referred to as <i>competing risks</i>. Survival modelling learns functions to map a patient’s data <i>(covariates)</i> to the time of occurrence of a single outcome <i>(time-to-event)</i>.</p>
 
+  <h3 id="competing-risks">Competing risks: Multiple causes for the same outcome</h3>
+  <p>
+    Consider a clinician managing patients with advanced liver disease. The goal is to predict outcomes, but patients
+    face more than one possible endpoint. Some will pass away while waiting for treatment; others will receive a liver
+    transplant. These events <em>compete</em> with each other: once a patient receives a transplant, they exit the waiting-list , and vice versa.
+  </p>
+  <p>
+    This is the problem of <i><strong>competing risks</strong></i>, and it appears throughout the healthcare sector:
+  </p>
+  <ul>
+    <li>Cancer patients may die from their malignancy or from other causes</li>
+    <li>Heart disease patients face cardiovascular events or non-cardiac mortality</li>
+    <li>Hospitalized patients may be discharged or die during their stay</li>
+  </ul>
+  <p>
+    Traditional survival models that predict time-to-event were not designed to handle this complexity. While deep
+    learning has introduced powerful approaches to survival analysis, most operate as black boxes, providing
+    predictions without explanations.
+  </p>
+  <p>
+    <strong>CRISP-NAM addresses this gap</strong> by handling competing risks
+    while maintaining interpretability, and allowing practitioners to examine exactly how each feature influences each risk. Below is a figure illustrating how competing risks are modeled in survival analysis.
+  </p>
   <figure>
     <img src="assets/ism_overview-cropped.svg" alt="Survival Model Overview" style="width: 100%; max-width: 1200px; margin: 0 auto 1rem auto; display: block;  border-radius: 4px;">
-    <figcaption>Figure 1: Sketch of survival analysis.</figcaption>
+    <figcaption>Figure 1: Sketch of modeling competing risks in survival analysis.</figcaption>
   </figure>
 
   <h3 id="existing-models">Existing Models</h3>
@@ -136,31 +164,45 @@
     <figcaption style="margin-top: 20px; text-align: left; max-width: 800px; margin-left: auto; margin-right: auto;">
       </figcaption>
     </figure>
+    <h3 id="inspiration">Inspiration of CRISP-NAM</h3>
+    <p>
+        CRISP-NAM is a derivative of Generalized Additive Model (GAM) family. GAMs have been a statistical mainstay for decades. Rather than assuming linear covariate-outcome relationships, they allow each covariate to have its own contribution via a separate <i>spline</i> function. Spline functions capture non-linear relationships such as thresholds, curves and saturation effects that linear models cannot represent. Since covariate has its own function, and they are added together, GAMs can provide insights into how each feature affects the outcome.
+    </p>
+    <p>
+      <b>Neural Networks as Shape Functions:</b> NAMs replace traditional spline-based functions with small neural networks, one per feature. Each neural network takes a single feature and models its contribution to the outcome. Training NAMs is easier and offers multiple advantages such as automatic weight learning, standard regularization techniques, and GPU acceleration. Even though NAMs don't model covariate interactions, their ability to model single covariate's effect is what makes them interpretable.
+      </p>
+      <p><b>TODO: Include NAM schematic</b></p>
     <h3 id="architecture">Architecture</h3>
     <p>The CRISP-NAM architecture consists of 4 components:
         <ul>
-        <li><strong>Neural Additive Model</strong>: Each input feature is processed by its own dedicated neural network called FeatureNet. This sub-network is designed to learn the feature’s non-linear contribution to the overall outcome. Since it isolates the effects of each feature, it is more interpretable than existing approaches. </li>
-        <li><strong>Risk-Specific Projections</strong>: Each covariate and competing risk pair is then linearly transformed by a dedicated projection layer to measure its contribution to the outcome.</li>
-        <li><strong>Risk Aggregation</strong>: Individual risk contribution to the hazard function is computed as the sum of individual feature contributions, preserving the additive nature of the original NAM model.</li>
-        <li><strong> Log Hazard Calculation</strong>: This calculates the absolute probability for each risk by capturing the underlying temporal pattern independent of the covariates. It calculates the final risk probability with patients experiencing it within a specified time-interval and a cause-specific baseline measure. </li>
+        <li><strong>FeatureNets</strong>: Each input feature is processed by its own dedicated neural network called <i>FeatureNet</i>. This sub-network is designed to learn the feature’s non-linear contribution to the overall outcome. Since it isolates the effects of each feature, it is more interpretable than existing approaches. </li>
+        <li><strong>Risk-Specific Projections</strong>: Each covariate and competing risk pair is then linearly transformed by a dedicated projection layer to measure its contribution to the outcome. Normalization constraint is added to ensure that contribution scales are comparable across risks enabling fair comparisonof feature importance between different event types.</li>
+        <li><strong>Additive Risk Aggregation</strong>: Individual risk contribution to the hazard function is computed as the sum of individual feature contributions, preserving the additive nature of the original NAM model.</li>
+        <li><strong>Cause-specific Log Hazard Calculation</strong>: This calculates the absolute probability for each risk by capturing the underlying temporal pattern independent of the covariates. It calculates the final risk probability with patients experiencing it within a specified time-interval and a cause-specific baseline measure. </li>
         </ul>
     </p>
+    <p><b>TODO: Include CRISP-NAM architecture</b></p>
 
     <h3 id="advantages">Advantages</h3>
     <ul>
-        <li>CRISP-NAM is an extension of the Neural Additive Model for survival analysis, resulting in an inherently interpretable model. It retains the interpretability and feature-wise transparency of NAMs, allowing for flexible and non-linear modelling in competing risk scenarios. This enables us to visualize each feature’s contribution via shape plots, enhancing interpretability.</li>
+        <li>It retains the interpretability and feature-wise transparency of NAMs, allowing for flexible and non-linear modelling in competing risk scenarios. This enables us to visualize each feature’s contribution via shape plots, enhancing interpretability.</li>
         <li>The calculation of absolute risks is done independently of patient covariates. This provides predictions for clinically relevant time horizons (1-year, 5-year) and facilitates better patient care.</li>
     </ul>
+    <h3 id="limitations">Limitations</h3>
+        <p>
+          By design, the model excludes feature interactions. This is
+          intentional, as interactions make interpretation exponentially more difficult. With <d-math>p</d-math>
+          features, there are <d-math>O(p^2)</d-math> pairwise interactions, and visualization beyond pairwise terms
+          becomes impractical. We accept some reduction in predictive power in exchange for guaranteed interpretability.
+        </p>
+    </h3>
     <h2 id="evaluation">Evaluation</h2>
     <p>
         The dataset was evaluated using a mix of both discriminative and calibration metrics. 
         <ol>
-        <li><strong>Time-Dependent Area-Under-the-Curve (TD-AUC)</strong>: It is an extension of the standard ROC-AUC designed specifically for time-to-event (survival) data, where outcomes happen over time. It measures how well the model ranks patients for an event that happened at time t over those who didn’t experience the event/were censored. </li>
-        <li><strong>Dependent Concordance Index (TD-CI)</strong>:</li>
-        <li><strong>Brier score (BS)</strong>: </li>
-        <li><strong>Feature importance plots</strong>: These plots summarize a covariate’s contribution to the final output of the model. In CRISP-NAM, it is the mean of the covariates risk projection vector for a particular risk. Its value determines the positive and negative contributions to the risk.</li>
-        <li><strong>Shape plots</strong>:  Plotted for every covariate, it shows its individual contribution to the overall probability of the risk. Beneath each curve, rug plots illustrate the empirical distribution of feature values, highlighting regions where data is sparse. For CRISP-NAM, this plot is the risk projection vector of every covariate per risk. This enables ranking features by their impact on each competing risk, providing valuable insights into risk-specific predictor importance.</li>
-        </ol>
+        <li><strong>Time-Dependent Area-Under-the-Curve (TD-AUC)</strong>: It is an extension of the standard ROC-AUC designed specifically for time-to-event (survival) data, where outcomes happen over time. It measures how well the model ranks patients for an event that happened at time <i>t</i> over those who didn’t experience the events were censored. </li>
+        <li><strong>Time-Dependent Concordance Index (TD-CI)</strong>: Concordance Index (CI) measures the proportion of pairs for which the model correctly predicts the survival time, among all pairs for which this can be acurately determined. Time-depenent CI calculates this count within a common observation time interval. It is a good metric to assess model performance over time.</li>
+        <li><strong>Brier score (BS)</strong>: This score evaluates the accuracy of a survival function at a given time <i>t</i>. It calculates the average of squared distances between the observed survival status and the predicted survival probability. This is a combined measure of caliberation and discrimination.</li>
     </p>
     <h3 id="support2">Support 2 dataset</h3>
     The SUPPORT2 dataset originates from the Study to Understand Prognoses
@@ -173,39 +215,47 @@
     This dataset was chosen as it contains 2 competing risks: Death due to cancer and Death due to other reasons.
 
     <h3 id="results">Results</h3>
-
-        <ul>
-            <li><strong>Metrics:</strong> Below are the performance metrics comparing CRISP-NAM and the state-of-the-art DeepHIT model for the two competing risks: Death due to cancer (Risk 1) and death due to other causes (Risk 2).</li>
-
-        <figure>
+      <p>
+        Below are the performance metrics comparing CRISP-NAM and the state-of-the-art DeepHIT model for the two competing risks: Death due to cancer (Risk 1) and death due to other causes (Risk 2).
+      </p>
+      <figure>
         <iframe src="./diagrams/results-table.html" width="100%" height="400" style="border: none;"></iframe>
-        </figure>
+      </figure>
 
-        <p>CRISP-NAM shows better performance in Risk 1, and DeepHIT is better in Risk 2. Across more datasets, such as Framingham Heart Study and Primary Biliary Cholangitis (PBC), DeepHit generally achieves a higher performance, and CRISP-NAM demonstrates competitive discrimination with the added benefit of interpretability.
+      <p>
+        CRISP-NAM shows better performance in Risk 1, and DeepHIT is better in Risk 2. Across more datasets, such as Framingham Heart Study and Primary Biliary Cholangitis (PBC), DeepHit generally achieves a higher performance, and CRISP-NAM demonstrates competitive discrimination with the added benefit of interpretability.
 
-        The main point to note here is that CRISP-NAM achieves comparable performance to DeepHIT while providing interpretability, which is crucial for clinical adoption.
-        </p>
-        <li><strong>Feature Plots</strong></li>
-        <figure>
-            <iframe src="./diagrams/feature_importance.html" width="100%" height="600" style="border: none;"></iframe>
-        </figure>
-    </ul>
+        The main point to note here is that CRISP-NAM achieves <b>comparable performance to DeepHIT while providing interpretability</b>, which is crucial for clinical adoption.
+      </p>
 
   <h2 id="interp">Interpretability</h2>
+  <p>
+    <ol>
+      <li><strong>Feature importance plots</strong>: These plots summarize a covariate’s contribution to the final output of the model. In CRISP-NAM, it is the mean of the covariates risk projection vector for a particular risk. Its value determines the positive and negative contributions to the risk.</li>
+    <figure>
+        <iframe src="./diagrams/feature_importance.html" width="100%" height="600" style="border: none;"></iframe>
+    </figure>
 
+    <li><strong>Shape plots</strong>:  Plotted for every covariate, it shows its individual contribution to the overall probability of the risk. Beneath each curve, rug plots illustrate the empirical distribution of feature values, highlighting regions where data is sparse. For CRISP-NAM, this plot is the risk projection vector of every covariate per risk. This enables ranking features by their impact on each competing risk, providing valuable insights into risk-specific predictor importance.</li>
+    </ol>
+    <p><b>TODO: Add shape plots</b></p>
+  </p>
   <h2 id="conclusion">Conclusion</h2>
-  <p>Conclusion on the project contributions</p>
+  <p>
+    CRISP-NAM demonstrates that interpretability and competitive predictive performance are not mutually exclusive, even for complex problems like competing risks survival analysis. By extending Neural Additive Models to handle multiple event types, we provide clinicians and researchers with a tool that achieves strong discrimination while fully explaining its predictions.
+  </p>
+  <p>
+    In high-stakes healthcare applications, understanding why a model makes its predictions is not a luxury but a requirement. CRISP-NAM makes that understanding achievable.
+  </p>
 </d-article>
 
 <d-appendix>
   <h3 id="acknowledgements">Acknowledgments</h3>
-  <p>
-  
-  </p>
-
-  <d-footnote-list></d-footnote-list>
+  <p><b>TODO: Add Acknowledgements</b></p>
   <d-bibliography src="references.bib"></d-bibliography>
+  <p><b>TODO: Add references</b></p>
   <d-citation-list></d-citation-list>
+  <p><b>TODO: Add mathematical primer</b></p>
 </d-appendix>
 
 </body>
