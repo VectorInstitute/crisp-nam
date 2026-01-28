@@ -2,6 +2,8 @@
  * Main diagrams module - imports and initializes all visualizations
  */
 
+import { initNamStructure } from './nam-architecture';
+
 // Simple HTML escape function to prevent XSS when inserting text as HTML
 function escapeHTML(str) {
     return String(str)
@@ -18,7 +20,9 @@ function escapeHTML(str) {
   // Initialize all visualizations
   export function initVisualizations() {
     // Any interactive visualizations to initialize would go here
-    // The main interactive visualization is already handled in the iframe
+      // The main interactive visualization is already handled in the iframe
+    try { initNamStructure('nam-structure-diagram'); } catch (e) { console.error(e); }
+
   }
   
   /**
