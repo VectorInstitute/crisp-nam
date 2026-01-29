@@ -92,7 +92,7 @@
 
   <h2 id="overview">AI In healthcare</h2>
 
-  <p>In the past decade, AI has made numerous advances in the field of healthcare. Sophisticated algorithms are available to analyze and interpret medical images such as X-rays and CT scans, accelerating disease diagnosis. AI’s ability to synthesize and understand large amounts of patient data (genetics, biomarkers, clinical history) has led to personalized treatment plans and individualized therapies. Drug discovery, disease risk prediction and assessment, and survival analysis are other areas where new AI models have been developed. These AI-driven systems promise greater efficiency and accuracy in the healthcare ecosystem. However, many challenges remain for their widespread deployment and adoption. <d-cite key="https://pmc.ncbi.nlm.nih.gov/articles/PMC11638409/"/></p>
+  <p>In the past decade, AI has made numerous advances in the field of healthcare. Sophisticated algorithms are available to analyze and interpret medical images such as X-rays and CT scans, accelerating disease diagnosis. AI’s ability to synthesize and understand large amounts of patient data (genetics, biomarkers, clinical history) has led to personalized treatment plans and individualized therapies. Drug discovery, disease risk prediction and assessment, and survival analysis are other areas where new AI models have been developed. These AI-driven systems promise greater efficiency and accuracy in the healthcare ecosystem. However, many challenges remain for their widespread deployment and adoption. <d-cite key="aiinhealthcare2021"></d-cite></p>
 
   <h3 id="challenges">Challenges</h3>
 
@@ -144,7 +144,7 @@
     <ul>
     <li><strong>Traditional</strong>: Cox Proportional Hazards(CoxPH) is a popular model. It linearly maps covariates to time-to-event prediction. It assumes a multiplicative effect of covariates on the prediction and that their effect is constant over time.</li>
     <li><strong>Deep Learning</strong>: This class of models uses a feed-forward neural network for mapping covariates to the risk of the outcome. This captures non-linear and high-dimensional relationships between the two variables. DeepSurv, CoxNAM, and SurvNam are a few examples. </li>
-    <li><strong>Models for competing risks</strong>: Such models follow a cause-specific hazard framework to model multiple risks. These models map covariates to each competing risk separately and learn the joint distribution of survival times and the risks directly. DeepHit and  Neural Fine Gray are a few examples. </li>
+    <li><strong>Models for competing risks</strong>: Such models follow a cause-specific hazard framework to model multiple risks. These models map covariates to each competing risk separately and learn the joint distribution of survival times and the risks directly. DeepHit<d-cite key="lee2018deephit"></d-cite> and  Neural Fine Gray<d-cite key="jeanselme2023neural"></d-cite> are a few examples. </li>
     </ul>
   </p>
   <h3 id="limitations">Limitations of existing approaches</h3>
@@ -154,7 +154,7 @@
     <li><strong>Lack of interpretability</strong>: Deep learning survival models (DeepSurv) are black-box and suffer from a lack of interpretability.  This makes it difficult to understand how individual features contribute to predictions for different competing risks. </li>
     <li><strong>Require >1 model</strong>: Cause-specific modelling requires learning multiple models - one for each outcome. This can be computationally expensive.</li>
     </ul>
-    </p>
+  </p>
 
   <h2 id="overview">Our solution: CRISP-NAM</h2>
   <p>To address these limitations, we developed a novel approach for modeling competing risks, CRISP-NAM -  <b>C</b>ompeting <b>R</b>isks <b>I</b>nterpretable <b>S</b>urvival <b>P</b>rediction with <b>N</b>eural <b>A</b>dditive <b>M</b>odels. It extends the NAM architecture approach to enable flexible, interpretable, and non-linear modeling.
@@ -169,7 +169,7 @@
         CRISP-NAM is a derivative of Generalized Additive Model (GAM) family. GAMs have been a statistical mainstay for decades. Rather than assuming linear covariate-outcome relationships, they allow each covariate to have its own contribution via a separate <i>spline</i> function. Spline functions capture non-linear relationships such as thresholds, curves and saturation effects that linear models cannot represent. Since covariate has its own function, and they are added together, GAMs can provide insights into how each feature affects the outcome.
     </p>
     <p>
-      <b>Neural Networks as Shape Functions:</b> NAMs replace traditional spline-based functions with small neural networks, one per feature. Each neural network takes a single feature and models its contribution to the outcome. Training NAMs is easier and offers multiple advantages such as automatic weight learning, standard regularization techniques, and GPU acceleration. Even though NAMs don't model covariate interactions, their ability to model single covariate's effect is what makes them interpretable.
+      <b>Neural Networks as Shape Functions:</b> NAMs<d-cite key="agarwal2021neural"></d-cite> replace traditional spline-based functions with small neural networks, one per feature. Each neural network takes a single feature and models its contribution to the outcome. Training NAMs is easier and offers multiple advantages such as automatic weight learning, standard regularization techniques, and GPU acceleration. Even though NAMs don't model covariate interactions, their ability to model single covariate's effect is what makes them interpretable.
       </p>
       <div id="nam-structure-diagram" style="width: 100%; height: 400px; margin: 20px 0;"></div>
     <h3 id="architecture">Architecture</h3>
@@ -266,8 +266,7 @@
     <p>
         We would like to thank the Vector Institute for supporting this research, and the open-source community for providing valuable datasets, tools and frameworks that made this work possible.
     </p>
-  <d-bibliography src="references.bib"></d-bibliography>
-  <p><b>TODO: Add references</b></p>
+<d-bibliography src="references.bib"></d-bibliography>
   <d-citation-list></d-citation-list>
   <h3 id="primer">Survival analysis: Primer</h3>
   <h4>The Hazard Function</h4>
@@ -293,7 +292,7 @@
       <p>
         With competing risks, we require separate hazard functions for each event type. For event type <d-math>k</d-math>, the <strong>cause-specific hazard</strong> is defined as:
       </p>
-      <d-math block>\lambda_k(t|\mathbf{x}) = \lim_{\Delta t \to 0} \frac{P(t \leq T < t + \Delta t, E=k \mid T \geq t, \mathbf{x})}{\Delta t}</d-math>
+      <d-math block>\lambda_k(t|\mathbf{x}) = \lim_{\Delta t \to 0} \frac{P(t \leq T \leq t + \Delta t, E=k \mid T \geq t, \mathbf{x})}{\Delta t}</d-math>
       <p>This represents the instantaneous rate of experiencing event <d-math>k</d-math> at time <d-math>t</d-math>, among subjects still at risk. </p>
       <p>
         The key insight is that these hazards interact through the risk set. A high hazard for one event can effectively reduce the observed rate of another, not through a causal mechanism, but because experiencing one event removes subjects from the risk pool for competing events.
