@@ -267,7 +267,48 @@
   <d-bibliography src="references.bib"></d-bibliography>
   <p><b>TODO: Add references</b></p>
   <d-citation-list></d-citation-list>
-  <p><b>TODO: Add mathematical primer</b></p>
+  <h3 id="primer">Survival analysis: Primer</h3>
+  <h4>The Hazard Function</h4>
+    <p>
+      Central to survival analysis is the <strong>hazard function</strong> <d-math>h(t)</d-math>, which represents the
+      instantaneous risk of an event at time <d-math>t</d-math>, conditional on survival up to that point. It answers:
+      "Given survival to time <d-math>t</d-math>, what is the instantaneous failure rate?"
+    </p>
+    <p>Currently, the classic <strong>Cox Proportional Hazards</strong> model relates covariates to this hazard:</p>
+    <d-math block>h(t \mid X) = h_0(t) \cdot \exp(\beta^\top X)</d-math>
+    <p>
+      Here, <d-math>h_0(t)</d-math> is the baseline hazard common to all subjects, and <d-math>\exp(\beta^\top
+        X)</d-math> is a subject-specific multiplier based on covariates. A coefficient <d-math>\beta_i = 0.7</d-math>
+      corresponds to a hazard ratio of <d-math>\exp(0.7) \approx 2</d-math>, indicating a doubling of risk.
+    </p>
+    <blockquote>
+      <strong>The proportional hazards assumption:</strong> This model assumes that the hazard ratio between any two
+      subjects remains constant over time. Covariates may double your risk relative to another subject, but that
+      multiplicative effect persists regardless of the time horizon.
+    </blockquote>
+
+    <h4>The Competing Risks Extension</h4>
+      <p>
+        With competing risks, we require separate hazard functions for each event type. For event type <d-math>k</d-math>, the <strong>cause-specific hazard</strong> is defined as:
+      </p>
+      <d-math block>\lambda_k(t|\mathbf{x}) = \lim_{\Delta t \to 0} \frac{P(t \leq T < t + \Delta t, E=k \mid T \geq t, \mathbf{x})}{\Delta t}</d-math>
+      <p>This represents the instantaneous rate of experiencing event <d-math>k</d-math> at time <d-math>t</d-math>, among subjects still at risk. </p>
+      <p>
+        The key insight is that these hazards interact through the risk set. A high hazard for one event can effectively reduce the observed rate of another, not through a causal mechanism, but because experiencing one event removes subjects from the risk pool for competing events.
+      </p>
+    <h4>Cumulative Incidence Function</h4>
+      <p>To compute absolute risk predictions, we require the <strong>cumulative incidence function (CIF)</strong>:</p>
+      <d-math block>F_k(t|\mathbf{x}) = \int_0^t S(u|\mathbf{x}) \cdot \lambda_k(u|\mathbf{x}) \, du</d-math>
+      <p>where the overall survival function is:</p>
+      <d-math block>S(t|\mathbf{x}) = \exp\left(-\sum_{k=1}^{K} \int_0^t \lambda_k(u|\mathbf{x}) \, du\right)</d-math>
+      <p>In practice, we discretize time and compute:</p>
+      <d-math block>\hat{F}_k(t|\mathbf{x}) \approx \sum_{t_m \leq t} \hat{S}(t_{m-1}|\mathbf{x}) \cdot
+      \hat{\lambda}_k(t_m|\mathbf{x})</d-math>
+    <h4>Breslow Estimator for Baseline Hazard</h4>
+      <p>After training, we estimate the cumulative baseline hazard using:</p>
+      <d-math block>\hat{\Lambda}_{0k}(t) = \sum_{n: T_n \leq t, E_n = k} \frac{1}{\sum_{j: T_j \geq T_n}\exp(\eta_k(\mathbf{x}_j))}</d-math>
+      <p>This non-parametric estimator makes no assumptions about the functional form of the baseline hazard.</p>
+    </d-appendix>
 </d-appendix>
 
 </body>
