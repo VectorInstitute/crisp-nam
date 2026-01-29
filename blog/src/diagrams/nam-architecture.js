@@ -81,7 +81,14 @@ export function initNamStructure(containerId) {
     });
     // Ellipsis for features
     nodesGroup.append('text').attr('x', xFeatures + 50).attr('y', yStart + yGap * 2.7).text('⋮').attr('class', 'arch-text').attr('text-anchor', 'middle');
-
+    nodesGroup.append('text')
+        .attr('x', xStart + 50)
+        .attr('y', yStart - 10)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '14px')
+        .attr('font-weight', '600')
+        .attr('fill', '#333')
+        .text('Input');
     //Draw final feature
     drawBox(nodesGroup, xFeatures, finalFeature.y, finalFeature.label, '#e3f2fd', '#2196f3', finalFeature.id);
 

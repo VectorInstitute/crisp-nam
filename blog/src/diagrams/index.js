@@ -3,6 +3,8 @@
  */
 
 import { initNamStructure } from './nam-architecture';
+import { initCrispNamStructure } from './crisp-nam-architecture';
+
 
 // Simple HTML escape function to prevent XSS when inserting text as HTML
 function escapeHTML(str) {
@@ -21,8 +23,8 @@ function escapeHTML(str) {
   export function initVisualizations() {
     // Any interactive visualizations to initialize would go here
       // The main interactive visualization is already handled in the iframe
-    try { initNamStructure('nam-structure-diagram'); } catch (e) { console.error(e); }
-
+      try { initNamStructure('nam-structure-diagram'); } catch (e) { console.error(e); }
+      try { initCrispNamStructure('crisp-nam-structure-diagram'); } catch (e) { console.error(e); }
   }
   
   /**
