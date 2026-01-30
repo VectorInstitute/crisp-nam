@@ -11,16 +11,19 @@
       padding: 20px;
       background-color: transparent;
     }
-    
-    .table-container {
+
+    table-container {
       margin: 20px 0;
-      overflow-x: auto;
+      overflow-x: visible;
+      max-height: none !important;
+      overflow: visible;
     }
-    
+
     table {
       width: 100%;
       border-collapse: collapse;
       background: white;
+      table-layout: auto; /* allow columns to expand */
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       font-size: 14px;
     }
@@ -140,6 +143,5 @@
       </tbody>
     </table>
   </div>
-  <caption>Table 1: Performance comparison between CRISP-NAM and DeepHIT on SUPPORT2 dataset. Best scores are highlighted in bold green.</caption>
 </body>
 </html>
