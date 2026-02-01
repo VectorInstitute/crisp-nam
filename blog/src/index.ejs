@@ -221,7 +221,6 @@
         <iframe src="./diagrams/results-table.html" width="100%" height="400" style="border: none;"></iframe>
         <figcaption>Table 1: Performance comparison between CRISP-NAM and DeepHIT on SUPPORT2 dataset. Best scores are highlighted in bold green.</figcaption>
       </figure>
-
       <p>
         CRISP-NAM shows better performance in Risk 1, and DeepHIT is better in Risk 2. Across more datasets, such as Framingham Heart Study and Primary Biliary Cholangitis (PBC), DeepHit generally achieves a higher performance, and CRISP-NAM demonstrates competitive discrimination with the added benefit of interpretability.
 
@@ -234,7 +233,11 @@
       <li><strong>Feature importance plots</strong>: These plots summarize a covariate’s contribution to the final output of the model. In CRISP-NAM, it is the mean of the covariates risk projection vector for a particular risk. Its value determines the positive and negative contributions to the risk.</li>
     <figure>
         <iframe src="./diagrams/feature_importance.html" width="100%" height="600" style="border: none;"></iframe>
+        <figcaption>Figure 4: Feature Importance for Both Competing Risks.</figcaption>
     </figure>
+    <p>
+      <em>NOTE: </em> It is important to note that the feature importance plot provides a <b>global</b> view of how each covariate affects the risk. To determine its accuracy, physicians can validate it against their knowledge. This, along with covariate specific shape plots, provide an overall picture of how an individual covariate affects the risk as determined by the model.
+    </p>
 
     <li><strong>Shape plots</strong>:  Plotted for every covariate, it shows its individual contribution to the overall probability of the risk. Beneath each curve, rug plots illustrate the empirical distribution of feature values, highlighting regions where data is sparse. For CRISP-NAM, this plot is the risk projection vector of every covariate per risk. This enables ranking features by their impact on each competing risk, providing valuable insights into risk-specific predictor importance.</li>
     </ol>
