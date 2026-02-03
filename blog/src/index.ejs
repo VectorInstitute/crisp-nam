@@ -22,16 +22,16 @@
 
 <d-front-matter>
   <script type="text/json">{
-  "title": "CRISP-NAM: Competing Risks Interpretable Survival
-  Prediction with Neural Additive Models",
-  "description": "Sample blog post for AI Engineering",
+  "title": "CRISP-NAM: Competing Risks Interpretable Survival Prediction with Neural Additive Models",
+  "description": "Interpretable survival prediction for competing risks in healthcare",
   "authors": [
     {
       "author": "Dhanesh Ramachandram",
       "affiliation": "Vector Institute",
       "affiliationURL": "https://vectorinstitute.ai"
-    }, {
-      "author": "Ananya Raval",
+    },
+    {
+      "author": "Ananya Raval"
     }
   ],
   "katex": {
@@ -92,7 +92,7 @@
 
   <h2 id="overview">AI In healthcare</h2>
 
-  <p>In the past decade, AI has made numerous advances in the field of healthcare. Sophisticated algorithms are available to analyze and interpret medical images such as X-rays and CT scans, accelerating disease diagnosis. AI’s ability to synthesize and understand large amounts of patient data (genetics, biomarkers, clinical history) has led to personalized treatment plans and individualized therapies. Drug discovery, disease risk prediction and assessment, and survival analysis are other areas where new AI models have been developed. These AI-driven systems promise greater efficiency and accuracy in the healthcare ecosystem. However, many challenges remain for their widespread deployment and adoption. <d-cite key="aiinhealthcare2021"></d-cite></p>
+  <p>In the past decade, AI has made numerous advances in the field of healthcare. Sophisticated algorithms are available to analyze and interpret medical images such as X-rays and CT scans, accelerating disease diagnosis. AI’s ability to synthesize and understand large amounts of patient data (genetics, biomarkers, clinical history) has led to personalized treatment plans and individualized therapies. Drug discovery, disease risk prediction and assessment, and survival analysis are other areas where new AI models have been developed. These AI-driven systems promise greater efficiency and accuracy in the healthcare ecosystem. However, many challenges remain for their widespread deployment and adoption. <d-cite key="bajwa2021artificial"></d-cite></p>
 
   <h3 id="challenges">Challenges</h3>
 
@@ -280,8 +280,7 @@
     <p>
         We would like to thank the Vector Institute for supporting this research, and the open-source community for providing valuable datasets, tools and frameworks that made this work possible.
     </p>
-<d-bibliography src="../references.bib"></d-bibliography>
-  <d-citation-list></d-citation-list>
+
   <h3 id="primer">Survival analysis: Primer</h3>
   <h4>The Hazard Function</h4>
     <p>
@@ -323,7 +322,10 @@
       <p>After training, we estimate the cumulative baseline hazard using:</p>
       <d-math block>\hat{\Lambda}_{0k}(t) = \sum_{n: T_n \leq t, E_n = k} \frac{1}{\sum_{j: T_j \geq T_n}\exp(\eta_k(\mathbf{x}_j))}</d-math>
       <p>This non-parametric estimator makes no assumptions about the functional form of the baseline hazard.</p>
-    </d-appendix>
+
+  <d-footnote-list></d-footnote-list>
+  <d-bibliography src="references.bib"></d-bibliography>
+  <d-citation-list></d-citation-list>
 </d-appendix>
 
 </body>
