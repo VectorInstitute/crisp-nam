@@ -104,12 +104,12 @@
 
         <li><strong>Regulatory frameworks</strong>: Many policies have established explainability and interpretability constraints for high-risk AI systems. As an example, the Food and Drug Administration (FDA) guidance requires clear documentation of AI/ML medical device decision-making.</li>
     
-    </ul>Our focus in this blog will be on developing <b>interpretable</b>techniques for survival analysis use cases. It is a robust framework for providing time-to-event predictions, especially in healthcare.
+    </ul>Our focus in this blog will be on developing interpretable techniques for survival analysis use cases. It is a robust framework for providing time-to-event predictions, especially in healthcare.
   </p>
 
   <h3 id="surv">Survival Analysis: Primer</h3>
 
-  <p>Survival analysis is a collection of statistical procedures for data analysis where the outcome is time-to-event, meaning time until an event of interest occurs. For example, clinicians utilize patient data <i>(covariates)</i> to predict the timing of hospital readmissions for specific medical conditions. There can be multiple outcomes  (such as cardiovascular risk, death, etc.) associated with patient data, and multiple mutually exclusive events that can lead to any outcome. These outcomes are referred to as <i>competing risks</i>. Survival modelling learns functions to map a patient’s data <i>(covariates)</i> to the time of occurrence of a single outcome <i>(time-to-event)</i>.</p>
+  <p>Survival analysis is a collection of statistical procedures for data analysis where the outcome is time-to-event, meaning time until an event of interest occurs. For example, clinicians utilize patient data <i>(covariates)</i> to predict the timing of hospital readmissions for specific medical conditions. There can be multiple outcomes  (such as cardiovascular risk, death, etc.) associated with patient data, and multiple mutually exclusive events that can lead to any outcome. These outcomes are referred to as <i>competing risks</i>. Survival modelling learns functions to map a patient’s data <i>(covariates)</i> to the time of occurrence of a single outcome <i>(time-to-event)</i>. <small><a href="#appendix">See Appendix for details.</a></small></h3></p>
 
   <h3 id="competing-risks">Competing risks: Multiple causes for the same outcome</h3>
   <p>
@@ -241,8 +241,19 @@
 
     <li><strong>Shape plots</strong>:  Plotted for every covariate, it shows its individual contribution to the overall probability of the risk. Beneath each curve, rug plots illustrate the empirical distribution of feature values, highlighting regions where data is sparse. For CRISP-NAM, this plot is the risk projection vector of every covariate per risk. This enables ranking features by their impact on each competing risk, providing valuable insights into risk-specific predictor importance.</li>
     </ol>
-    <p><b>TODO: Add shape plots</b></p>
-  </p>
+    <h3 id="shape-plots">Shape Plots for Individual Features</h3>
+    <figure role="group" aria-labelledby="fig-shape-plots">
+    <iframe
+        src="./diagrams/shape_plots.html"
+        width="100%"
+        height="600"
+        style="border: none;"
+        title="Interactive shape plots"
+    ></iframe>
+    <figcaption id="fig-shape-plots">
+        Figure 5: Shape plots for individual features. Select dataset, risk type, and feature to view the plot.
+    </figcaption>
+    </figure>
   <h2 id="conclusion">Conclusion</h2>
   <p>
     CRISP-NAM demonstrates that interpretability and competitive predictive performance are not mutually exclusive, even for complex problems like competing risks survival analysis. By extending Neural Additive Models to handle multiple event types, we provide clinicians and researchers with a tool that achieves strong discrimination while fully explaining its predictions.
@@ -264,12 +275,12 @@
   </div>
 </d-article>
 
-<d-appendix>
+<d-appendix id="appendix">
   <h3 id="acknowledgements">Acknowledgments</h3>
     <p>
         We would like to thank the Vector Institute for supporting this research, and the open-source community for providing valuable datasets, tools and frameworks that made this work possible.
     </p>
-<d-bibliography src="references.bib"></d-bibliography>
+<d-bibliography src="../references.bib"></d-bibliography>
   <d-citation-list></d-citation-list>
   <h3 id="primer">Survival analysis: Primer</h3>
   <h4>The Hazard Function</h4>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Feature Shape Plot</title>
+
+  <!-- Plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <script src="shape_plot.js" defer></script>
+
+  <style>
+    .plot-wrapper {
+    position: relative;
+    width: 450px;
+    height: 450px;
+    margin: 0 auto;
+    }
+
+    .plot {
+    width: 100%;
+    height: 100%;
+    }
+
+    /* Overlay controls */
+    .controls.overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+
+    display: flex;
+    gap: 10px;
+
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    /* Buttons styling */
+    .controls select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #d0d7de;
+    font-size: 13px;
+    cursor: pointer;
+    }
+
+  </style>
+</head>
+
+<body>
+
+    <!-- Controls ABOVE the plot -->
+    <div class="controls">
+        <select id="datasetSelect"></select>
+        <select id="riskSelect">
+        <option value="risk1">Risk 1</option>
+        <option value="risk2">Risk 2</option>
+        </select>
+        <select id="featureSelect"></select>
+    </div>
+
+    <!-- Plot container -->
+    <div class="plot-wrapper">
+        <div id="plot"></div>
+    </div>
+      
+      
+</body>
+</html>
