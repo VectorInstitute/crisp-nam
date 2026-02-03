@@ -22,16 +22,16 @@
 
 <d-front-matter>
   <script type="text/json">{
-  "title": "CRISP-NAM: Competing Risks Interpretable Survival
-  Prediction with Neural Additive Models",
-  "description": "Sample blog post for AI Engineering",
+  "title": "CRISP-NAM: Competing Risks Interpretable Survival Prediction with Neural Additive Models",
+  "description": "Interpretable survival prediction for competing risks in healthcare",
   "authors": [
     {
       "author": "Dhanesh Ramachandram",
       "affiliation": "Vector Institute",
       "affiliationURL": "https://vectorinstitute.ai"
-    }, {
-      "author": "Ananya Raval",
+    },
+    {
+      "author": "Ananya Raval"
     }
   ],
   "katex": {
@@ -269,8 +269,7 @@
     <p>
         We would like to thank the Vector Institute for supporting this research, and the open-source community for providing valuable datasets, tools and frameworks that made this work possible.
     </p>
-<d-bibliography src="references.bib"></d-bibliography>
-  <d-citation-list></d-citation-list>
+
   <h3 id="primer">Survival analysis: Primer</h3>
   <h4>The Hazard Function</h4>
     <p>
@@ -312,7 +311,10 @@
       <p>After training, we estimate the cumulative baseline hazard using:</p>
       <d-math block>\hat{\Lambda}_{0k}(t) = \sum_{n: T_n \leq t, E_n = k} \frac{1}{\sum_{j: T_j \geq T_n}\exp(\eta_k(\mathbf{x}_j))}</d-math>
       <p>This non-parametric estimator makes no assumptions about the functional form of the baseline hazard.</p>
-    </d-appendix>
+
+  <d-footnote-list></d-footnote-list>
+  <d-bibliography src="references.bib"></d-bibliography>
+  <d-citation-list></d-citation-list>
 </d-appendix>
 
 </body>
