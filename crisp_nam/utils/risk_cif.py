@@ -1,3 +1,8 @@
+"""Risk functions for evaluation.
+
+This module provides functions to compute cumulative incidence functions (CIFs) and risk scores for competing risk models.
+"""
+
 from typing import Any, List
 
 import numpy as np
@@ -8,7 +13,7 @@ def compute_baseline_cif(
     times: np.ndarray, events: np.ndarray, eval_times: List[Any], event_type: np.ndarray
 ) -> np.ndarray:
     """
-    Compute baseline cumulative incidence function for a specific event type
+    Compute baseline cumulative incidence function for a specific event type.
 
     Args:
         times: Numpy array of event times
@@ -41,65 +46,6 @@ def compute_baseline_cif(
 
     return baseline_cif
 
-
-def predict_absolute_risk(
-    model: torch.nn.Module,
-    x: np.ndarray,
-    baseline_cifs: np.ndarray,
-    eval_times: np.ndarray,
-    device: str = "cpu",
-) -> np.ndarray:
-    """
-    Predict absolute risk (cumulative incidence) at specified times
-
-    Args:
-        model: Trained CoxNAM model
-        x: Feature matrix
-        baseline_cifs: Dictionary of baseline CIFs for each event type
-        eval_times: Times at which to evaluate the CIF
-        device: Device to run computations on
-
-    Returns
-    -------
-        Numpy array of predicted absolute risks with shape (n_samples, n_risks, n_times)
-    """
-    model.eval()
-
-    # Convert to tensor if needed
-    if not isinstance(x, torch.Tensor):
-        x = torch.FloatTensor(x).to(device)
-
-    with torch.no_grad():
-        # Get risk scores
-        risk_scores, _ = model(x)
-
-        # Convert to hazard ratios
-        hazard_ratios = [torch.exp(score).cpu().numpy() for score in risk_scores]
-
-        # Initialize prediction array
-        n_samples = x.shape[0]
-        n_risks = model.num_competing_risks
-        n_times = len(eval_times)
-        abs_risks = np.zeros((n_samples, n_risks, n_times))
-
-        # Compute absolute risk for each sample, risk, and time
-        for k in range(n_risks):
-            # Skip if baseline CIF is not available
-            if k + 1 not in baseline_cifs:
-                continue
-
-            baseline_cif = baseline_cifs[k + 1]
-
-            for i in range(n_samples):
-                for j, t in enumerate(eval_times):
-                    # Simple Fine-Gray model for cumulative incidence
-                    abs_risks[i, k, j] = 1 - np.exp(
-                        -baseline_cif[j] * hazard_ratios[k][i]
-                    )
-
-    return abs_risks
-
-
 def predict_cif(
     model: torch.nn.Module,
     x: np.ndarray,
@@ -113,7 +59,8 @@ def predict_cif(
     Args:
         model: Trained  model.
         x: Input tensor of shape (n_samples, n_features).
-        baseline_cif: Array of shape (len(times),) — estimated CIF for baseline (e.g. from compute_baseline_cif).
+        baseline_cif: Array of shape (len(times),) —
+        estimated CIF for baseline (e.g. from compute_baseline_cif).
         times: Time points at which CIF is evaluated.
         event_type: Integer, 0-based index of event of interest.
 
@@ -129,10 +76,8 @@ def predict_cif(
     baseline_cif = np.asarray(baseline_cif).reshape(1, -1)  # (1, T)
     risk_scores = np.exp(f_j_x).reshape(-1, 1)  # (N, 1)
 
-    # Fine-Gray style CIF prediction under PH assumption
-    cif_pred = 1.0 - np.power(1.0 - baseline_cif, risk_scores)  # shape (N, T)
-
-    return cif_pred
+    # Return Fine-Gray style CIF prediction under PH assumption
+    return 1.0 - np.power(1.0 - baseline_cif, risk_scores)  # shape (N, T)
 
 
 def predict_risk(model: np.ndarray, x_input: np.ndarray, device: str = "cpu"):
@@ -141,7 +86,8 @@ def predict_risk(model: np.ndarray, x_input: np.ndarray, device: str = "cpu"):
 
     Args:
         model : Trained model.
-        x_input (np.ndarray or torch.Tensor): Input features of shape (n_samples, n_features).
+        x_input (np.ndarray or torch.Tensor): Input features of
+        shape (n_samples, n_features).
         device (str): Device to run the computation on.
 
     Returns
@@ -175,7 +121,8 @@ def predict_absolute_risk(
     Args:
         model: Trained  model.
         x_input (np.ndarray or Tensor): Input features, shape (n_samples, n_features).
-        baseline_cifs (dict): Mapping of event index to baseline CIF array of shape (n_times,).
+        baseline_cifs (dict): Mapping of event index to baseline CIF
+        array of shape (n_times,).
         times (np.ndarray): Time grid used for baseline_cifs.
         device: CPU or CUDA.
 
