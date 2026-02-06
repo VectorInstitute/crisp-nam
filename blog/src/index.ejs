@@ -4,8 +4,6 @@
   <meta name="viewport" content="width=1300">
   <style id="distill-article-specific-styles">
     <%= require("raw-loader!./style.css") %>
-  </style>
-  <style>
     /* Override default list styling to prevent double bullets */
     d-contents ul, d-contents li {
       list-style-type: none !important;
@@ -13,6 +11,16 @@
     d-contents li::marker {
       display: none !important;
       content: '' !important;
+    }
+     d-math[display="block"] {
+      width: 100% !important;
+      display: block !important;
+      text-align: center !important;
+      margin: 1.5rem 0 !important;
+    }
+    .katex-display {
+      text-align: center !important;
+      margin: 0 !important;
     }
   </style>
   <script src="https://distill.pub/template.v2.js"></script>
@@ -72,7 +80,7 @@
       </div>
       <div class="toc-section"><a href="#crisp-nam">Our solution: CRISP-NAM</a>
         <ul>
-          <li><a href="#inspiration">Inspiration of CRISP-NAM</a></li>
+          <li><a href="#inspiration">CRISP-NAM - Background</a></li>
           <li><a href="#architecture">Architecture</a></li>
           <li><a href="#advantages">Advantages</a></li>
           <li><a href="#limitations">Limitations</a></li>
@@ -98,18 +106,18 @@
 
   <p>Current generative AI models achieve a very high accuracy in classification and prediction. However, they suffer from multiple limitations.
     <ul>
-        <li><strong>Interpretability</strong>: Deep learning models are black boxes, and it is challenging to determine how they make a particular prediction. In a high-stakes field such as healthcare, clinicians must understand the reasoning behind a model’s output. Misinterpretation can lead to incorrect treatment plans or adverse patient outcomes.</li>
+        <li><strong>Interpretability</strong>: Deep learning models are black boxes, and it is challenging to determine how they make a particular prediction. In a high-stakes field such as healthcare, clinicians must understand the reasoning behind a model’s output. Misinterpretation can lead to incorrect treatment plans or adverse patient outcomes.<d-cite key="2024frobt1444763"></d-cite></li>
 
-        <li><strong>Data privacy</strong>: Many AI models are trained using vast amounts of patient data - EHR, images, etc. It contains personally identifiable information that needs to be protected. This can require regulatory practises in place before more widespread adoption.</li>
+        <li><strong>Data privacy</strong>: Many AI models are trained using vast amounts of patient data - EHR, images, etc. It contains personally identifiable information that needs to be protected. This can require regulatory practises in place before more widespread adoption.<d-cite key = "2021ai_medical_challenges"></d-cite></li>
 
-        <li><strong>Regulatory frameworks</strong>: Many policies have established explainability and interpretability constraints for high-risk AI systems. As an example, the Food and Drug Administration (FDA) guidance requires clear documentation of AI/ML medical device decision-making.</li>
+        <li><strong>Regulatory frameworks</strong>: Many policies have established explainability and interpretability constraints for high-risk AI systems. As an example, the Food and Drug Administration (FDA)<d-cite key="fda_ai_software_medical_device"></d-cite> guidance requires clear documentation of AI/ML medical device decision-making.</li>
     
     </ul>Our focus in this blog will be on developing interpretable techniques for survival analysis use cases. It is a robust framework for providing time-to-event predictions, especially in healthcare.
   </p>
 
   <h3 id="surv">Survival Analysis: Primer</h3>
 
-  <p>Survival analysis is a collection of statistical procedures for data analysis where the outcome is time-to-event, meaning time until an event of interest occurs. For example, clinicians utilize patient data <i>(covariates)</i> to predict the timing of hospital readmissions for specific medical conditions. There can be multiple outcomes  (such as cardiovascular risk, death, etc.) associated with patient data, and multiple mutually exclusive events that can lead to any outcome. These outcomes are referred to as <i>competing risks</i>. Survival modelling learns functions to map a patient’s data <i>(covariates)</i> to the time of occurrence of a single outcome <i>(time-to-event)</i>. <small><a href="#appendix">See Appendix for details.</a></small></h3></p>
+  <p>Survival analysis is a collection of statistical procedures for data analysis where the outcome is time-to-event, meaning time until an event of interest occurs. For example, clinicians utilize patient data <i>(covariates)</i> to predict the timing of hospital readmissions for specific medical conditions. There can be multiple outcomes (such as cardiovascular risk, death, etc.) associated with patient data, and multiple mutually exclusive events that can lead to any outcome. These outcomes are referred to as <i>competing risks</i>. Survival modelling learns functions to map a patient’s data <i>(covariates)</i> to the time of occurrence of a single outcome <i>(time-to-event)</i>. <small><a href="#appendix">See Appendix for details.</a></small></h3></p>
 
   <h3 id="competing-risks">Competing risks: Multiple causes for the same outcome</h3>
   <p>
@@ -142,8 +150,8 @@
   <h3 id="existing-models">Existing Models</h3>
   <p>Many statistical and machine learning techniques have been used to capture the interactions between covariates and time-to-event variables. The following are a few classes of models that exist in the literature:
     <ul>
-    <li><strong>Traditional</strong>: Cox Proportional Hazards(CoxPH) is a popular model. It linearly maps covariates to time-to-event prediction. It assumes a multiplicative effect of covariates on the prediction and that their effect is constant over time.</li>
-    <li><strong>Deep Learning</strong>: This class of models uses a feed-forward neural network for mapping covariates to the risk of the outcome. This captures non-linear and high-dimensional relationships between the two variables. DeepSurv, CoxNAM, and SurvNam are a few examples. </li>
+    <li><strong>Traditional</strong>: Cox Proportional Hazards(CoxPH)<d-cite key="cox1972regression"></d-cite> is a popular model. It linearly maps covariates to time-to-event prediction. It assumes a multiplicative effect of covariates on the prediction and that their effect is constant over time.</li>
+    <li><strong>Deep Learning</strong>: This class of models uses a feed-forward neural network for mapping covariates to the risk of the outcome. This captures non-linear and high-dimensional relationships between the two variables. DeepSurv<d-cite key="katzman2018deepsurv"></d-cite>, CoxNAM<d-cite key="xu2023coxnam"></d-cite>, and SurvNam<d-cite key="utkin2022survnam"></d-cite> are a few examples. </li>
     <li><strong>Models for competing risks</strong>: Such models follow a cause-specific hazard framework to model multiple risks. These models map covariates to each competing risk separately and learn the joint distribution of survival times and the risks directly. DeepHit<d-cite key="lee2018deephit"></d-cite> and  Neural Fine Gray<d-cite key="jeanselme2023neural"></d-cite> are a few examples. </li>
     </ul>
   </p>
@@ -163,7 +171,7 @@
     <iframe src="./diagrams/venn.html" width="700" height="500" style="border: none;"></iframe>
     <figcaption>Figure 2: CRISP-NAM combines advantages from multiple modeling approaches.</figcaption>
     </figure>
-    <h3 id="inspiration">Inspiration of CRISP-NAM</h3>
+    <h3 id="inspiration">CRISP-NAM - Background</h3>
     <p>
         CRISP-NAM is a derivative of Generalized Additive Model (GAM) family. GAMs have been a statistical mainstay for decades. Rather than assuming linear covariate-outcome relationships, they allow each covariate to have its own contribution via a separate <i>spline</i> function. Spline functions capture non-linear relationships such as thresholds, curves and saturation effects that linear models cannot represent. Since covariate has its own function, and they are added together, GAMs can provide insights into how each feature affects the outcome.
     </p>
@@ -197,11 +205,44 @@
     </h3>
     <h2 id="evaluation">Evaluation</h2>
     <p>
-        The dataset was evaluated using a mix of both discriminative and calibration metrics. 
+        The dataset was evaluated using a mix of both discriminative and calibration metrics. <d-cite key="sksurv"></d-cite>
         <ol>
-        <li><strong>Time-Dependent Area-Under-the-Curve (TD-AUC)</strong>: It is an extension of the standard ROC-AUC designed specifically for time-to-event (survival) data, where outcomes happen over time. It measures how well the model ranks patients for an event that happened at time <i>t</i> over those who didn’t experience the events were censored. </li>
-        <li><strong>Time-Dependent Concordance Index (TD-CI)</strong>: Concordance Index (CI) measures the proportion of pairs for which the model correctly predicts the survival time, among all pairs for which this can be acurately determined. Time-depenent CI calculates this count within a common observation time interval. It is a good metric to assess model performance over time.</li>
-        <li><strong>Brier score (BS)</strong>: This score evaluates the accuracy of a survival function at a given time <i>t</i>. It calculates the average of squared distances between the observed survival status and the predicted survival probability. This is a combined measure of caliberation and discrimination.</li>
+        <li><strong>Time-Dependent Area-Under-the-Curve (TD-AUC)</strong>: It is an extension of the standard ROC-AUC designed specifically for time-to-event (survival) data, where outcomes happen over time. It measures how well the model ranks patients for an event that happened at time <i>t</i> over those who didn’t experience the events or were censored. <d-cite key="2016_roc_citation"></d-cite>
+        <p class = "center-text">
+        <d-math display="block">\widehat{\mathrm{AUC}}(t) =
+            \frac{\sum_{i=1}^n \sum_{j=1}^n I(y_j > t) I(y_i \leq t) \omega_i
+            I(\hat{f}(\mathbf{x}_j) \leq \hat{f}(\mathbf{x}_i))}
+            {(\sum_{i=1}^n I(y_i > t)) (\sum_{i=1}^n I(y_i \leq t) \omega_i)}
+        </d-math><br/>
+        <p class = "center-text">
+            <d-math>n: </d-math> Number of patients <br/>
+            <d-math>x_i, x_j: </d-math> Covariates of patient <d-math>i</d-math> or <d-math>j</d-math> <br/>
+            <d-math>y_i, y_j: </d-math> Time to event response for patient <d-math>i</d-math> or <d-math>j</d-math><br/>
+            <d-math>\hat{f}(x_i), \hat{f}(x_j): </d-math> Risk score assigned by the model for patient <d-math>i</d-math> or <d-math>j</d-math> <br/>
+            <d-math>\omega_i, \omega_j:</d-math> Inverse probability of censoring weight for patient <d-math>i</d-math> or <d-math>j</d-math>
+        </p> 
+
+        </p></li>
+        <li><strong>Time-Dependent Concordance Index (TD-CI)</strong>: Concordance Index (CI) measures the proportion of pairs for which the model correctly predicts the survival time, among all pairs for which this can be acurately determined. Time-depenent CI calculates this count within a common observation time interval. It is a good metric to assess model performance over time. <d-cite key="2016_c_index_ref"></d-cite><br/>
+        <p class = "center-text">
+            <d-math display="block">\text{TD-CI} = \frac{\sum{i \neq j} I\{\eta_i < \eta_j\} I\{T_i \gt T_j\}{d_j}}{\sum{i \neq j} I\{{T_i \gt T_j}\}{d_j}}</d-math>
+            <d-math>i, j: </d-math> patient id <d-math>i</d-math> or <d-math>j</d-math><br/>
+            <d-math>\eta_i, \eta_j: </d-math> Risk score assigned by the model for patient <d-math>i</d-math> or <d-math>j</d-math> <br/>
+            <d-math>T_i, T_j</d-math> Time to event response for patient <d-math>i</d-math> or <d-math>j</d-math><br/>
+            <d-math>d_i, d_j: </d-math> indicates whether
+            <d-math>T_i</d-math> has been fully observed (<d-math>= 1</d-math>) or not (<d-math>= 0</d-math>).<br/>
+            </d-math>I[·]</d-math> Indicator function that denotes whether the element belongs to the set (<d-math>= 1</d-math>) or not(<d-math>= 0</d-math>).
+        </p>
+        </li>
+        <li><strong>Brier score (BS)</strong>: This score evaluates the accuracy of a survival function at a given time <i>t</i>. It calculates the average of squared distances between the observed survival status and the predicted survival probability. This is a combined measure of caliberation and discrimination.<d-cite key="2021brier_score_ref"></d-cite><br/>
+            <p class="center-text">
+            <d-math display="block"> \text{Brier Score} = \frac{1}{N} \sum_{i=1}^{N} (\hat{y}_i - y_i)^2</d-math>
+            <d-math>N:</d-math>  Number of subjects <br/>
+            <d-math>\hat{y}_i:</d-math> Predicted survival probability by the model for ith subject <br/>
+            <d-math>y_i: </d-math>Observed outcome in the ith subject (1 for event, 0 for non-event)<br/>
+            </d-math>I[·]</d-math> Indicator function that denotes whether the element inside belongs to the set (<d-math>= 1</d-math>) or not(<d-math>= 0</d-math>).
+            </p>
+        </li>
     </p>
     <h3 id="support2">Support 2 dataset</h3>
     The SUPPORT2 dataset originates from the Study to Understand Prognoses
