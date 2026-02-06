@@ -1,13 +1,22 @@
+"""Discrimination metrics for time-to-event models with competing risks.
+
+This module contains functions to compute the cumulative and single time-dependent AUC and time-dependent C-index for ealuating competing risks.
+"""
+
 import numpy as np
-from .ipcw import estimate_ipcw  
+
+from .ipcw import estimate_ipcw
+
 
 epsilon = 1e-10
+
 
 def auc_td(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=1):
     """
     Compute the time-dependent AUC for a given competing risk using predicted CIFs.
 
-    Parameters:
+    Parameters
+    ----------
         e_test : ndarray of shape (n_samples,)
             Event indicator (0=censored, 1=event of interest, 2=competing event, etc.)
         t_test : ndarray of shape (n_samples,)
@@ -23,7 +32,8 @@ def auc_td(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=
         primary_risk : int
             The event label to treat as the event of interest.
 
-    Returns:
+    Returns
+    -------
         auc_value : float
             AUC estimate at time t (always between 0 and 1)
         km : Updated Kaplan-Meier estimator
@@ -53,8 +63,8 @@ def auc_td(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=
     # Compute pairwise AUC: compare each (event, control) pair
     auc_numerator = 0.0
     auc_denominator = 0.0
-    for i, (score_i, w_i) in enumerate(zip(event_scores, weights_event)):
-        for j, (score_j, w_j) in enumerate(zip(control_scores, weights_control)):
+    for _i, (score_i, w_i) in enumerate(zip(event_scores, weights_event)):
+        for _j, (score_j, w_j) in enumerate(zip(control_scores, weights_control)):
             weight = w_i * w_j
             auc_denominator += weight
             if score_i > score_j:
@@ -66,17 +76,23 @@ def auc_td(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=
     auc_value = auc_numerator / auc_denominator if auc_denominator > 0 else np.nan
     return auc_value, km
 
-def cumulative_dynamic_auc(e_test, t_test, risk_predicted_test, times, t_eval=None, km=None, primary_risk=1):
+
+def cumulative_dynamic_auc(
+    e_test, t_test, risk_predicted_test, times, t_eval=None, km=None, primary_risk=1
+):
     """
-    Computes the cumulative dynamic AUC by numerically integrating the time-dependent AUC over a range of time points.
-    
-    Parameters:
+    Compute the cumulative dynamic AUC by numerically integrating the
+    time-dependent AUC over a range of time points.
+
+    Parameters
+    ----------
         e_test, t_test, risk_predicted_test, times, km, primary_risk:
             Same as in auc_td.
         t_eval: ndarray, optional
             Specific time points to evaluate. If None, uses times.
-            
-    Returns:
+
+    Returns
+    -------
         auc_integral: float
             The cumulative dynamic AUC.
         km: object
@@ -84,18 +100,32 @@ def cumulative_dynamic_auc(e_test, t_test, risk_predicted_test, times, t_eval=No
     """
     km = estimate_ipcw(km)
     t_eval = times if t_eval is None else t_eval
-    aucs = [auc_td(e_test, t_test, risk_predicted_test, times, t, km, primary_risk)[0] for t in t_eval]
+    aucs = [
+        auc_td(e_test, t_test, risk_predicted_test, times, t, km, primary_risk)[0]
+        for t in t_eval
+    ]
     t_eval, aucs = t_eval[~np.isnan(aucs)], np.array(aucs)[~np.isnan(aucs)]
     if t_eval.shape[0] < 2:
         raise ValueError("At least two time points must be given")
     auc_integral = np.trapz(aucs, t_eval) / (t_eval[-1] - t_eval[0])
     return auc_integral, km
 
-def truncated_concordance_td(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=1, tied_tol=1e-8):
+
+def truncated_concordance_td(
+    e_test,
+    t_test,
+    risk_predicted_test,
+    times,
+    t,
+    km=None,
+    primary_risk=1,
+    tied_tol=1e-8,
+):
     """
     Compute the truncated time-dependent concordance index (C-index).
-    
-    Parameters:
+
+    Parameters
+    ----------
         e_test : ndarray
             Event indicator (0=censored, 1=event of interest, etc.)
         t_test : ndarray
@@ -112,14 +142,15 @@ def truncated_concordance_td(e_test, t_test, risk_predicted_test, times, t, km=N
             Risk of interest
         tied_tol : float
             Tolerance to assign 0.5 score for ties
-            
-    Returns:
+
+    Returns
+    -------
         c_index : float
         km : Updated km object
     """
     epsilon = 1e-10
     index = np.argmin(np.abs(times - t))
-    
+
     # IPCW
     if km is not None:
         km = estimate_ipcw(km)
@@ -144,7 +175,7 @@ def truncated_concordance_td(e_test, t_test, risk_predicted_test, times, t, km=N
         after_mask = t_test > t_i
         before_mask = (t_test <= t_i) & (e_test != primary_risk) & (e_test != 0)
 
-        weights_after = weights_event[after_mask] / (w_i ** 2)
+        weights_after = weights_event[after_mask] / (w_i**2)
         weights_before = weights_event[before_mask] / (w_i * weights_event[before_mask])
 
         risks_after = risk_predicted_test[after_mask, index]
