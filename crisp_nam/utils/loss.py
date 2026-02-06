@@ -1,3 +1,9 @@
+"""Loss functions for competing risks.
+
+This module implements weighted and un-weighted
+negative log-likelihood loss, L2 penalty loss functions.
+"""
+
 import torch
 
 
@@ -11,14 +17,15 @@ def weighted_negative_log_likelihood_loss(
     eps=1e-8,
 ) -> float:
     """
-    Computes the weighted negative log-likelihood loss for competing risks Cox model.
+    Compute the weighted negative log-likelihood loss for competing risks Cox model.
 
     Args:
         risk_scores: List of tensors with shape (batch_size, 1) for each competing risk
         times: Event/censoring times (batch_size,)
         events: Event indicators (0=censored, 1...K=event types) (batch_size,)
         num_competing_risks: Number of competing risks
-        event_weights: Tensor of weights for each competing risk type (size: num_competing_risks)
+        event_weights: Tensor of weights for each competing risk type
+        (size: num_competing_risks)
         sample_weights: Tensor of weights for each sample (size: batch_size)
         eps: Small constant for numerical stability
 
@@ -83,7 +90,7 @@ def negative_log_likelihood_loss(
     risk_scores, times, events, num_competing_risks, eps=1e-8
 ):
     """
-    Computes the negative log-likelihood loss for competing risks Cox model.
+    Compute the negative log-likelihood loss for competing risks Cox model.
 
     Args:
         risk_scores: List of tensors with shape (batch_size, 1) for each competing risk

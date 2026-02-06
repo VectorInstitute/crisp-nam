@@ -1,3 +1,8 @@
+"""Utility functions for plotting.
+
+This module provides functions to visualize feature importance and shape functions for crisp_nam models in a way that is compatible with both CPU and CUDA devices.
+"""
+
 from typing import List, Union
 
 import matplotlib.pyplot as plt
@@ -22,6 +27,7 @@ def plot_feature_importance(
     Plot feature importance with both top positive and negative influences,
     handling both CPU and CUDA devices automatically.
     """
+
     # determine model device
     device = next(model.parameters()).device
     model.eval()
@@ -107,15 +113,13 @@ def plot_coxnam_shape_functions(
     Plot shape functions for each feature in a CoxNAM model,
     automatically handling CPU vs CUDA inputs.
     """
+
     device = next(model.parameters()).device
     model.eval()
     risk_idx = risk_to_plot - 1
 
     # ensure X is a numpy array
-    if isinstance(X, torch.Tensor):
-        X_np = X.cpu().numpy()
-    else:
-        X_np = np.array(X, dtype=float)
+    X_np = X.cpu().numpy() if isinstance(X, torch.Tensor) else np.array(X, dtype=float)
 
     # derive feature list
     num_features = model.num_features
