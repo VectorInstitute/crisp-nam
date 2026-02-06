@@ -145,7 +145,7 @@ def negative_log_likelihood_loss(
 
 def compute_l2_penalty(model, include_bias=False) -> int:
     """
-    Compute L2 regularization penalty on model parameters
+    Compute L2 regularization penalty on model parameters.
 
     Args:
         model: Neural network model

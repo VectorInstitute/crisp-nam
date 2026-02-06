@@ -1,6 +1,7 @@
 """Risk functions for evaluation.
 
-This module provides functions to compute cumulative incidence functions (CIFs) and risk scores for competing risk models.
+This module provides functions to compute cumulative incidence functions (CIFs)
+and risk scores for competing risk models.
 """
 
 from typing import Any, List
@@ -45,6 +46,7 @@ def compute_baseline_cif(
         baseline_cif[i] = cif_t
 
     return baseline_cif
+
 
 def predict_cif(
     model: torch.nn.Module,
