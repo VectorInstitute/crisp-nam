@@ -1,6 +1,7 @@
 """Utility functions for plotting.
 
-This module provides functions to visualize feature importance and shape functions for both crisp-nam and deephit models.
+This module provides functions to visualize feature importance
+and shape functions for both crisp-nam and deephit models.
 """
 
 from typing import List, Union
@@ -27,6 +28,7 @@ def plot_feature_importance(
     Plot feature importance with both top positive and negative influences,
     handling both CPU and CUDA devices automatically.
     """
+
     # determine model device
     device = next(model.parameters()).device
     model.eval()
