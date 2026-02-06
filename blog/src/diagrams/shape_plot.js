@@ -4,7 +4,6 @@ let currentRisk = 'risk1';
 let currentFeature = 'sps'
 let features = [];
 let risks = ['risk1', 'risk2'].map(r => ({ id: r }));
-// let distVisible = true;
 
 /* ---------- Load JSON ---------- */
 fetch("../final_results.json")
@@ -23,7 +22,7 @@ fetch("../final_results.json")
     populateDatasetDropdown();
     populateRiskDropdown();
     populateFeatureDropdown();
-    drawPlot();   // draw plot AFTER data loads
+    drawPlot();
   });
 
 /* ---------- Populate UI ---------- */
@@ -131,40 +130,20 @@ function drawPlot() {
     };
 
     const rugBars = {
-    x: entry.values,
-    //y: Array(entry.shape_plots.length).fill(Math.min(...entry.shape_plots.shp)-1e2), // position below x-axis
-    y: Array(entry.values.length).fill(-0.08), // position at min y
-    type: "scatter",
-    mode: "markers",
-    marker: {
-        symbol: "line-ns-open",
-        size: 14,                           // 🔑 thicker bars
-        color: "rgba(255,127,14,0.45)",
-        opacity: 1.0
-    },
-    cliponaxis: false,
-    hoverinfo: "skip",
-    showlegend: false
+        x: entry.values,
+        y: Array(entry.values.length).fill(-0.08),
+        type: "scatter",
+        mode: "markers",
+        marker: {
+            symbol: "line-ns-open",
+            size: 14,
+            color: "rgba(255,127,14,0.45)",
+            opacity: 1.0
+        },
+        cliponaxis: false,
+        hoverinfo: "skip",
+        showlegend: false
     };
-
-    // const layout = {
-    // title: `${currentDataset} — ${currentRisk}`,
-    // xaxis: {
-    //     title: "Feature Value",
-    //     showline: true,
-    //     mirror: true
-    // },
-    // yaxis: {
-    //     title: "Contribution",
-    //     range: [-0.12, 0.7],                 // 🔑 expanded
-    //     showline: true,
-    //     mirror: true,
-    // },
-    // margin: { l: 90, r: 30, t: 80, b: 80 },
-    // plot_bgcolor: "white",
-    // paper_bgcolor: "white",
-    // showlegend: false
-    // };
 
     /* ----- Render ----- */
     Plotly.react(
