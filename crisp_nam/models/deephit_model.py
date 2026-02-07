@@ -2,10 +2,11 @@
 
 from typing import Callable, Optional
 
-import torch
 import numpy as np
-from torch import nn
+import torch
 import torch.nn.functional as F
+from torch import nn
+
 
 class FCLayer(nn.Module):
     """Fully connected layer with optional batch norm, dropout, and activation."""
@@ -15,9 +16,9 @@ class FCLayer(nn.Module):
         in_dim: int,
         out_dim: int,
         activation: Optional[torch.Tensor] = None,
-        batch_norm: bool =False,
-        dropout_rate:float =0.0,
-        init_fn: Optional[Callable[[torch.Tensor]]|None] = nn.init.xavier_normal_,
+        batch_norm: bool = False,
+        dropout_rate: float = 0.0,
+        init_fn: Optional[Callable[[torch.Tensor]] | None] = nn.init.xavier_normal_,
     ) -> None:
         """Initialize the fully connected layer."""
         super(FCLayer, self).__init__()
@@ -36,11 +37,11 @@ class FCLayer(nn.Module):
 
         Args:
             x: Tensor of shape (batch_size, in_dim)
+
         Returns
         -------
             out: Tensor of shape (batch_size, out_dim)
         """
-
         x = self.fc(x)
         if self.batch_norm:
             x = self.batch_norm(x)
@@ -59,12 +60,12 @@ class FCNet(nn.Module):
         in_dim: int,
         num_layers: int,
         h_dim: int,
-        activation: Optional[nn.module]=None,
-        out_dim: Optional[int|None] = None,
-        out_activation: Optional[int|None] = None,
+        activation: Optional[nn.module] = None,
+        out_dim: Optional[int | None] = None,
+        out_activation: Optional[int | None] = None,
         batch_norm: bool = False,
         dropout_rate: float = 0.0,
-        init_fn: Optional[Callable[[torch.Tensor]]|None] = nn.init.xavier_normal_,
+        init_fn: Optional[Callable[[torch.Tensor]] | None] = nn.init.xavier_normal_,
     ) -> None:
         """Initialize the fully connected network."""
         super(FCNet, self).__init__()
@@ -96,27 +97,23 @@ class FCNet(nn.Module):
 
         self.network = nn.Sequential(*layers)
 
-    def forward(self,
-        x:torch.Tensor) -> Optional[nn.Module]:
+    def forward(self, x: torch.Tensor) -> Optional[nn.Module]:
         """Forward pass through the network.
 
         Args:
             x: Tensor of shape (batch_size, in_dim)
 
-        Returns:
+        Returns
         -------
             out: Tensor of shape (batch_size, out_dim)
         """
-
         return self.network(x)
 
 
 class DeepHit(nn.Module):
     """PyTorch implementation of DeepHit for competing risks survival analysis."""
 
-    def __init__(self,
-        input_dims: dict,
-        network_settings: dict):
+    def __init__(self, input_dims: dict, network_settings: dict):
         """Initialize the DeepHit model."""
         super(DeepHit, self).__init__()
 
@@ -154,11 +151,10 @@ class DeepHit(nn.Module):
         Args:
             None
 
-        Returns:
+        Returns
         -------
             None
         """
-
         # Shared network
         self.shared_net = FCNet(
             in_dim=self.x_dim,
@@ -188,8 +184,7 @@ class DeepHit(nn.Module):
             self.num_Event * self.h_dim_CS, self.num_Event * self.num_Category
         )
 
-    def forward(self,
-        x:torch.Tensor) -> tuple[torch.Tensor, None]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, None]:
         """Forward pass through the network.
 
         Args:
@@ -200,7 +195,6 @@ class DeepHit(nn.Module):
             risk_scores: List of (batch_size, 1) Tensors
             feature_outputs: None
         """
-
         # Shared network
         shared_out = self.shared_net(x)
 
@@ -235,12 +229,14 @@ class DeepHit(nn.Module):
         # In this model, we don't have separate shape functions, so just return None
         return out, None
 
-    def log_likelihood_loss(self,
+    def log_likelihood_loss(
+        self,
         out: torch.Tensor,
-        t: Optional[torch.Tensor|np.ndarray],
-        k: Optional[torch.Tensor|np.ndarray],
+        t: Optional[torch.Tensor | np.ndarray],
+        k: Optional[torch.Tensor | np.ndarray],
         mask1: torch.Tensor,
-        mask2: torch.Tensor):
+        mask2: torch.Tensor,
+    ):
         """Log-likelihood loss (including log-likelihood of censored subjects).
 
         Args:
@@ -254,7 +250,6 @@ class DeepHit(nn.Module):
         -------
             loss: Torch.tensor
         """
-
         # Convert to PyTorch tensors if necessary
         if not isinstance(k, torch.Tensor):
             k = torch.tensor(k, device=out.device)
@@ -276,11 +271,13 @@ class DeepHit(nn.Module):
 
         return -torch.mean(tmp1 + tmp2)
 
-    def ranking_loss(self,
+    def ranking_loss(
+        self,
         out: torch.Tensor,
-        t: Optional[torch.Tensor|np.ndarray],
-        k: Optional[torch.Tensor|np.ndarray],
-        mask2: torch.Tensor):
+        t: Optional[torch.Tensor | np.ndarray],
+        k: Optional[torch.Tensor | np.ndarray],
+        mask2: torch.Tensor,
+    ):
         """Ranking loss (calculated only for acceptable pairs).
 
         Args:
@@ -293,7 +290,6 @@ class DeepHit(nn.Module):
         -------
             loss: Torch.tensor
         """
-
         sigma1 = 0.1
         eta = []
 
@@ -341,11 +337,13 @@ class DeepHit(nn.Module):
 
         return torch.sum(eta)
 
-    def calibration_loss(self,
+    def calibration_loss(
+        self,
         out: torch.Tensor,
-        t: Optional[torch.Tensor|np.ndarray],
-        k: Optional[torch.Tensor|np.ndarray],
-        mask2: torch.Tensor) -> torch.Tensor:
+        t: Optional[torch.Tensor | np.ndarray],
+        k: Optional[torch.Tensor | np.ndarray],
+        mask2: torch.Tensor,
+    ) -> torch.Tensor:
         """Calibration loss.
 
         Args:
@@ -358,7 +356,6 @@ class DeepHit(nn.Module):
         -------
             loss: Torch.tensor
         """
-
         eta = []
 
         # Convert to PyTorch tensors if necessary
@@ -382,15 +379,17 @@ class DeepHit(nn.Module):
 
         return torch.sum(eta)
 
-    def compute_loss(self,
+    def compute_loss(
+        self,
         out: torch.Tensor,
-        t: Optional[torch.Tensor|np.ndarray],
-        k: Optional[torch.Tensor|np.ndarray],
-        mask1: Optional[torch.Tensor|np.ndarray],
+        t: Optional[torch.Tensor | np.ndarray],
+        k: Optional[torch.Tensor | np.ndarray],
+        mask1: Optional[torch.Tensor | np.ndarray],
         mask2: torch.Tensor,
         alpha: float = 1.0,
-        beta:float = 1.0,
-        gamma: float = 1.0):
+        beta: float = 1.0,
+        gamma: float = 1.0,
+    ):
         """Compute total loss.
 
         Args:
@@ -407,7 +406,6 @@ class DeepHit(nn.Module):
         -------
             total_loss: Torch.tensor
         """
-
         loss1 = self.log_likelihood_loss(out, t, k, mask1, mask2)
         loss2 = self.ranking_loss(out, t, k, mask2)
         loss3 = self.calibration_loss(out, t, k, mask2)
@@ -415,17 +413,16 @@ class DeepHit(nn.Module):
         # L2 regularization is handled by optimizer (weight_decay)
         return alpha * loss1 + beta * loss2 + gamma * loss3
 
-    def predict(self,
-        x: torch.Tensor) -> torch.Tensor:
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
         """Predict risk scores for input x.
 
         Args:
             x: Tensor of shape (batch_size, num_Event, num_Category)
+
         Returns
         -------
             out: Tensor of shape (batch_size, num_Event, num_Category)
         """
-
         self.eval()
         with torch.no_grad():
             out, _ = self.forward(x)
