@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import torch
 
-
 def plot_feature_importance(
     model: torch.nn.Module,
     x_data: Union[np.ndarray, torch.Tensor],

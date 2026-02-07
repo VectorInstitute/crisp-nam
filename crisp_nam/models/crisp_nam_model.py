@@ -3,7 +3,6 @@ survival analysis with L2 normalized projection weights.
 """
 
 from typing import (
-    Any,
     List,
     Optional,
     Sequence,
@@ -64,9 +63,8 @@ class FeatureNet(nn.Module):
 
         Returns
         -------
-            nn.Module
+            torch.Tensor
         """
-
         # ensure float32
         x = x.to(dtype=torch.float32)
         # Apply feature dropout during training if specified
@@ -89,9 +87,8 @@ class FeatureNet(nn.Module):
 
         Returns
         -------
-            nn.Module
+            torch.Tensor
         """
-
         was_training = self.training
         self.eval()
         with torch.no_grad():
@@ -105,7 +102,11 @@ class L2NormalizedLinear(nn.Module):
     """Linear layer with L2 normalized weights (unit norm constraint)."""
 
     def __init__(
-        self, in_features: int, out_features: int, bias: bool = False, eps: float = 1e-8
+        self,
+        in_features: int,
+        out_features: int,
+        bias: bool = False,
+        eps: float = 1e-8
     ) -> None:
         """Initialize the L2NormalizedLinear layer."""
         super(L2NormalizedLinear, self).__init__()
@@ -128,7 +129,6 @@ class L2NormalizedLinear(nn.Module):
         -------
             Output tensor
         """
-
         # L2 normalize weights to unit norm
         normalized_weight = F.normalize(self.weight, p=2, dim=1, eps=self.eps)
         return F.linear(x, normalized_weight, self.bias)
@@ -213,7 +213,6 @@ class CrispNamModel(nn.Module):
             risk_scores: List of (batch_size, 1) Tensors
             feature_outputs: List of (batch_size, hidden) Tensors
         """
-
         # ensure float32
         x = x.to(dtype=torch.float32)
         batch_size, _ = x.shape
@@ -271,7 +270,6 @@ class CrispNamModel(nn.Module):
         -------
             Dictionary mapping risk names to shape function values
         """
-
         self.eval()
 
         if not isinstance(x_values, torch.Tensor):
@@ -314,7 +312,6 @@ class CrispNamModel(nn.Module):
         -------
             Dictionary of weight norms by feature and risk
         """
-
         norms = {}
 
         for feat_idx in range(self.num_features):
@@ -334,7 +331,6 @@ class CrispNamModel(nn.Module):
         -------
             Dictionary of normalized weights
         """
-
         normalized_weights = {}
 
         for feat_idx in range(self.num_features):
@@ -374,7 +370,6 @@ class CrispNamModel(nn.Module):
         -------
             Dictionary of feature importances by risk type
         """
-
         self.eval()
         device = next(self.parameters()).device
 
@@ -424,7 +419,6 @@ class CrispNamModel(nn.Module):
         -------
             Dictionary of predictions for each competing risk
         """
-
         self.eval()
 
         # Convert to tensor if needed
@@ -483,7 +477,6 @@ class CrispNamModel(nn.Module):
         -------
             None
         """
-
         print("Projection Weight Analysis:")
         print("=" * 50)
 
