@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRISP-NAM Venn Diagram</title>
+  <style>
+    
+    .container {
+      background: white;
+      max-width: 500px;
+    }
+    
+    figure {
+      margin: 0;
+    }
+
+    circle {
+      transition: fill-opacity 0.3s ease;
+    }
+    
+  </style>
+</head>
+<body>
+  <div class="container">
+    <figure>
+      <svg width="500" height="400">
+        <!-- Circle 1: Traditional Models (left) -->
+        <circle cx="250" cy="150" r="120" fill="#1f77b4" fill-opacity="0.5" stroke="#333" stroke-width="1.5"/>
+        <text x="190" y="100" fill="black" font-weight="bold" font-size="20">Interpretability</text>
+        
+        <!-- Circle 2: Deep Learning (right) -->
+        <circle cx="180" cy="250" r="120" fill="#ff7f0e" fill-opacity="0.5" stroke="#333" stroke-width="1.5"/>
+        <text x="150" y="275" fill="black" font-weight="bold" font-size="20" text-anchor="middle">Non-linear</text>
+        <text x="150" y="300" fill="black" font-weight="bold" font-size="20" text-anchor="middle">Modeling</text>
+        
+        <!-- Circle 3: Competing Risks (bottom center) -->
+        <circle cx="320" cy="250" r="120" fill="#2ca02c" fill-opacity="0.5" stroke="#333" stroke-width="1.5"/>
+        <text x="360" y="275" fill="black" font-weight="bold" font-size="20" text-anchor="middle">Competing</text>
+        <text x="360" y="300" fill="black" font-weight="bold" font-size="20" text-anchor="middle">Risks</text>
+        
+        <!-- Center label - positioned at the intersection of all three circles -->
+        <text x="250" y="230" fill="#c2185b" font-weight="bold" font-size="20" text-anchor="middle">CRISP-</text>
+        <text x="250" y="250" fill="#c2185b" font-weight="bold" font-size="20" text-anchor="middle">NAM</text>
+      </svg>
+    </figure>
+  </div>
+</body>
+</html>
