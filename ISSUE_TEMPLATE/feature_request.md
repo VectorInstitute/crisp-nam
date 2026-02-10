@@ -1,20 +1,49 @@
 ---
-name: Feature request
-about: Suggest an idea for this project
-title: ''
-labels: ''
+name: 🐛 Bug Report
+about: Report a bug to help us improve the project
+title: '[BUG] '
+labels: 'bug'
 assignees: ''
 
 ---
 
-### Is your feature request related to a problem? Please describe.
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## Bug Description
 
-### Describe the solution you'd like
-A clear and concise description of what you want to happen.
+<!-- A clear and concise description of what the bug is -->
 
-### Describe alternatives you've considered
-A clear and concise description of any alternative solutions or features you've considered.
+## Steps to Reproduce
 
-### Additional context
-Add any other context or screenshots about the feature request here.
+1.
+2.
+3.
+
+**Code snippet (if applicable):**
+```python
+# Your code here
+```
+
+## Expected Behavior
+
+<!-- A clear description of what you expected to happen -->
+
+## Actual Behavior
+
+<!-- A clear description of what actually happened -->
+
+## Environment
+
+- **Component:** [API | Core functionality | Any]
+- **OS:** [Windows | MacOS | Linux]
+- **Python Version:**
+
+## Screenshots/Logs
+
+<!-- If applicable, add screenshots or error logs -->
+
+## Additional Context
+
+<!-- Add any other context about the problem here -->
+
+## Possible Solution
+
+<!-- If you have suggestions on how to fix the bug, please describe them here -->

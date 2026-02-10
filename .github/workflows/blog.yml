@@ -28,7 +28,7 @@ jobs:
       run: cd blog && npm ci
 
     - name: Build
-      run: cd blog && npm run build
+      run: cd ./blog && npm run build
 
     - name: Upload build artifact
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
