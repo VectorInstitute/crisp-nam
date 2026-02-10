@@ -6,8 +6,9 @@ and risk scores for competing risk models.
 
 from typing import Any, List
 
-import torch
 import numpy as np
+import torch
+
 
 def compute_baseline_cif(
     times: np.ndarray, events: np.ndarray, eval_times: List[Any], event_type: np.ndarray
@@ -25,7 +26,6 @@ def compute_baseline_cif(
     -------
         Numpy array of baseline CIF values at eval_times
     """
-
     # Sort times and corresponding events
     sort_idx = np.argsort(times)
     sorted_times = times[sort_idx]
@@ -70,7 +70,6 @@ def predict_cif(
     -------
         cif_pred: Array of shape (n_samples, len(times)) — predicted CIF per sample.
     """
-
     model.eval()
     with torch.no_grad():
         logits, _ = model(x)  # list of length num_risks
@@ -99,7 +98,6 @@ def predict_risk(
     -------
         np.ndarray: Array of shape (n_samples, num_risks) with relative risk scores.
     """
-
     model.eval()
 
     if isinstance(x_input, np.ndarray):
@@ -136,7 +134,6 @@ def predict_absolute_risk(
     -------
         np.ndarray: Shape (n_samples, num_events, n_times) with predicted CIFs.
     """
-
     rel_risks = predict_risk(model, x_input, device)  # shape (n_samples, num_events)
     n_samples, num_events = rel_risks.shape
     n_times = len(times)
