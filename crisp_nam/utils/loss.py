@@ -92,7 +92,7 @@ def negative_log_likelihood_loss(
     events: torch.Tensor,
     num_competing_risks: int,
     eps: float = 1e-8,
-):
+) -> torch.Tensor:
     """
     Compute the negative log-likelihood loss for competing risks Cox model.
 
@@ -147,7 +147,10 @@ def negative_log_likelihood_loss(
     return loss / max(n_events, 1)
 
 
-def compute_l2_penalty(model: torch.nn.Module, include_bias=False) -> float:
+def compute_l2_penalty(
+    model: torch.nn.Module,
+    include_bias: bool = False
+    ) -> torch.Tensor:
     """
     Compute L2 regularization penalty on model parameters.
 

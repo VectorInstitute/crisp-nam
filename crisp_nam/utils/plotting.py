@@ -20,7 +20,7 @@ def plot_feature_importance(
     n_bottom: int = 5,
     risk_idx: int = 1,
     figsize: tuple = (8, 6),
-    output_file: str = None,
+    output_file: str = "",
     color_positive: str = "#2196F3",
     color_negative: str = "#F44336",
 ) -> tuple:
@@ -46,12 +46,13 @@ def plot_feature_importance(
     - top_pos: List of top positive feature names
     - top_neg: List of top negative feature names
     """
+
     # determine model device
     device = next(model.parameters()).device
     model.eval()
 
     # prepare feature names
-    num_features: int = model.num_features
+    num_features: torch.Tensor = model.num_features
     if feature_names is None:
         feature_names = [f"Feature {i + 1}" for i in range(num_features)]
 
@@ -72,8 +73,8 @@ def plot_feature_importance(
                 continue
 
             # forward through the feature net and projection
-            rep = model.feature_nets[i](vals)
-            proj = model.risk_projections[i][risk_idx0](rep)
+            rep : torch.nn.ModuleList = model.feature_nets[i](vals)
+            proj : torch.nn.ModuleList = model.risk_projections[i][risk_idx0](rep)
             # mean contribution as a Python float
             contrib = proj.mean().item()
             feature_contribs[feature_names[i]] = contrib
@@ -121,12 +122,12 @@ def plot_coxnam_shape_functions(
     model: torch.nn.Module,
     X: Union[np.ndarray, torch.Tensor],
     risk_to_plot: int = 1,
-    feature_names: List[str] = None,
-    top_features: List[str] = None,
+    feature_names: List[str] | None = None,
+    top_features: List[str] | None = None,
     ncols: int = 3,
     figsize: tuple = (12, 8),
     output_file: str = "",
-) -> list[float]:
+) -> tuple:
     """Plot shape functions for each feature in a CoxNAM model,
     automatically handling CPU vs CUDA inputs.
 
@@ -186,8 +187,8 @@ def plot_coxnam_shape_functions(
             t_pts = torch.tensor(pts, dtype=torch.float32, device=device).unsqueeze(1)
 
             # compute shape values
-            rep = model.feature_nets[f_idx](t_pts)
-            proj = model.risk_projections[f_idx][risk_idx](rep)
+            rep : torch.nn.ModuleList = model.feature_nets[f_idx](t_pts)
+            proj : torch.nn.ModuleList = model.risk_projections[f_idx][risk_idx](rep)
             shp = proj.squeeze(-1).cpu().numpy()
 
             # plot
@@ -204,7 +205,7 @@ def plot_coxnam_shape_functions(
         ax.axis("off")
 
     fig.suptitle(f"Shape Functions for Risk {risk_to_plot}", fontsize=14)
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.tight_layout(rect=(0, 0, 1, 0.96))
     if output_file:
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
 
