@@ -5,11 +5,11 @@ and shape functions for both crisp-nam and deephit models.
 """
 
 from typing import List, Union
-
 import matplotlib.pyplot as plt
+
+import torch
 import numpy as np
 import pandas as pd
-import torch
 
 def plot_feature_importance(
     model: torch.nn.Module,
@@ -23,9 +23,27 @@ def plot_feature_importance(
     color_positive: str = "#2196F3",
     color_negative: str = "#F44336",
 ) -> tuple:
-    """
-    Plot feature importance with both top positive and negative influences,
+    """Plot feature importance with both top positive and negative influences,
     handling both CPU and CUDA devices automatically.
+
+    Args:
+    - model: A trained CoxNAM model (torch.nn.Module)
+    - x_data: Input data (numpy array or torch tensor) to compute contributions
+    - feature_names: Optional list of feature names (default: generic names)
+    - n_top: Number of top positive features to display
+    - n_bottom: Number of top negative features to display
+    - risk_idx: Index of the competing risk to analyze
+    - figsize: Size of the plot (width, height)
+    - output_file: Optional path to save the plot image (e.g., "feature_importance.png")
+    - color_positive: Color for positive contributions (default: blue)
+    - color_negative: Color for negative contributions (default: red)
+
+    Returns
+    -------
+    - fig: Matplotlib figure object
+    - ax: Matplotlib axes object
+    - top_pos: List of top positive feature names
+    - top_neg: List of top negative feature names
     """
 
     # determine model device
@@ -33,7 +51,7 @@ def plot_feature_importance(
     model.eval()
 
     # prepare feature names
-    num_features = model.num_features
+    num_features: int = model.num_features
     if feature_names is None:
         feature_names = [f"Feature {i + 1}" for i in range(num_features)]
 
@@ -98,7 +116,6 @@ def plot_feature_importance(
 
     return fig, ax, top_pos, top_neg
 
-
 def plot_coxnam_shape_functions(
     model: torch.nn.Module,
     X: Union[np.ndarray, torch.Tensor],
@@ -107,11 +124,25 @@ def plot_coxnam_shape_functions(
     top_features: List[str] = None,
     ncols: int = 3,
     figsize: tuple = (12, 8),
-    output_file: str = None,
-) -> tuple:
-    """
-    Plot shape functions for each feature in a CoxNAM model,
+    output_file: str = "",
+) -> list[float]:
+    """Plot shape functions for each feature in a CoxNAM model,
     automatically handling CPU vs CUDA inputs.
+
+    Args:
+    - model: A trained CoxNAM model (torch.nn.Module)
+    - X: Input data (numpy array or torch tensor) to compute shape functions
+    - risk_to_plot: Index of the competing risk to visualize
+    - feature_names: Optional list of feature names (default: generic names)
+    - top_features: Optional list of feature names to plot features)
+    - ncols: Number of columns in the subplot grid
+    - figsize: Size of the entire figure (width, height)
+    - output_file: Optional path to save the plot image (e.g., "shape_functions.png")
+
+    Returns
+    -------
+    - fig: Matplotlib figure object
+    - axes: List of Matplotlib axes objects for each plotted feature
     """
 
     device = next(model.parameters()).device
@@ -123,7 +154,7 @@ def plot_coxnam_shape_functions(
 
     # derive feature list
     num_features = model.num_features
-    if feature_names is None:
+    if feature_names:
         feature_names = [f"Feature {i + 1}" for i in range(num_features)]
     if top_features:
         # map names back to indices
