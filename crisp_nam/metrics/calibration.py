@@ -1,6 +1,7 @@
 """Calibration metrics for time-to-event models with competing risks.
 
-This module contains functions to compute the Brier score and integrated Brier score for competing risks.
+This module contains functions to compute the Brier score and
+integrated Brier score for competing risks.
 """
 
 import numpy as np
@@ -12,9 +13,16 @@ from .ipcw import estimate_ipcw
 epsilon = 1e-4
 
 
-def brier_score(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=1):
-    """
-    Compute the corrected Brier score for a given competing risk.
+def brier_score(
+    e_test: np.ndarray,
+    t_test: np.ndarray,
+    risk_predicted_test: np.ndarray,
+    times: np.ndarray,
+    t: float,
+    km: object | None = None,
+    primary_risk: int = 1,
+) -> tuple[float, object]:
+    """Compute the corrected Brier score for a given competing risk.
 
     This implementation is based on the work of Schoop et al. on quantifying the
     predictive accuracy of time-to-event models in the presence of competing risks.
@@ -68,8 +76,14 @@ def brier_score(e_test, t_test, risk_predicted_test, times, t, km=None, primary_
 
 
 def integrated_brier_score(
-    e_test, t_test, risk_predicted_test, times, t_eval=None, km=None, primary_risk=1
-):
+    e_test: np.ndarray,
+    t_test: np.ndarray,
+    risk_predicted_test: np.ndarray,
+    times: np.ndarray,
+    t_eval: np.ndarray | None = None,
+    km: object | None = None,
+    primary_risk: int = 1,
+) -> tuple[float, object]:
     """
     Compute the integrated Brier score for competing risks over a range of time points.
 
@@ -80,7 +94,8 @@ def integrated_brier_score(
     ----------
         e_test (ndarray): Event indicators.
         t_test (ndarray): Event/censoring times.
-        risk_predicted_test (ndarray): Predicted risk matrix with shape (n_samples, n_times).
+        risk_predicted_test (ndarray): Predicted risk matrix
+        with shape (n_samples, n_times).
         times (ndarray): Array of time points corresponding to the predictions.
         t_eval (ndarray, optional): Specific time points at which to
         compute the score. Defaults to using 'times'.

@@ -1,17 +1,25 @@
 """Discrimination metrics for time-to-event models with competing risks.
 
-This module contains functions to compute the cumulative and single time-dependent AUC and time-dependent C-index for ealuating competing risks.
+This module contains functions to compute the cumulative
+and single time-dependent AUC and time-dependent C-index
+for evaluating competing risks.
 """
 
 import numpy as np
 
 from .ipcw import estimate_ipcw
 
-
 epsilon = 1e-10
 
-
-def auc_td(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=1):
+def auc_td(
+    e_test: np.ndarray,
+    t_test: np.ndarray,
+    risk_predicted_test: np.ndarray,
+    times: np.ndarray,
+    t: float,
+    km: object | None = None,
+    primary_risk: int = 1,
+) -> tuple[float, object]:
     """
     Compute the time-dependent AUC for a given competing risk using predicted CIFs.
 
@@ -78,11 +86,16 @@ def auc_td(e_test, t_test, risk_predicted_test, times, t, km=None, primary_risk=
 
 
 def cumulative_dynamic_auc(
-    e_test, t_test, risk_predicted_test, times, t_eval=None, km=None, primary_risk=1
-):
-    """
-    Compute the cumulative dynamic AUC by numerically integrating the
-    time-dependent AUC over a range of time points.
+    e_test: np.ndarray,
+    t_test: np.ndarray,
+    risk_predicted_test: np.ndarray,
+    times: np.ndarray,
+    t_eval: np.ndarray | None = None,
+    km: object | None = None,
+    primary_risk: int = 1,
+) -> tuple[float, object]:
+    """Compute the cumulative dynamic AUC by numerically
+    integrating the time-dependent AUC over a range of time points.
 
     Parameters
     ----------
@@ -112,15 +125,15 @@ def cumulative_dynamic_auc(
 
 
 def truncated_concordance_td(
-    e_test,
-    t_test,
-    risk_predicted_test,
-    times,
-    t,
-    km=None,
-    primary_risk=1,
-    tied_tol=1e-8,
-):
+    e_test: np.ndarray,
+    t_test: np.ndarray,
+    risk_predicted_test: np.ndarray,
+    times: np.ndarray,
+    t: float,
+    km: object | None = None,
+    primary_risk: int = 1,
+    tied_tol: float = 1e-8,
+) -> tuple[float, object]:
     """
     Compute the truncated time-dependent concordance index (C-index).
 
