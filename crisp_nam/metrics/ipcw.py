@@ -21,7 +21,6 @@ def estimate_ipcw(km: tuple | KaplanMeierFitter) -> KaplanMeierFitter:
         A KaplanMeierFitter instance fitted to the provided data or
         the input instance if already fitted.
     """
-
     if isinstance(km, tuple):
         kmf = KaplanMeierFitter()
         e_train, t_train = km

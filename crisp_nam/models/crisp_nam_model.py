@@ -11,8 +11,8 @@ from typing import (
     Tuple,
 )
 
-import numpy as np
 import torch
+import numpy as np
 import torch.nn.functional as F
 from torch import nn
 
@@ -69,7 +69,6 @@ class FeatureNet(nn.Module):
         -------
             torch.Tensor
         """
-    
         # ensure float32
         x = x.to(dtype=torch.float32)
         # Apply feature dropout during training if specified
@@ -94,7 +93,6 @@ class FeatureNet(nn.Module):
         -------
             torch.Tensor
         """
-    
         was_training = self.training
         self.eval()
         with torch.no_grad():
@@ -102,7 +100,6 @@ class FeatureNet(nn.Module):
         if was_training:
             self.train()
         return result
-
 
 class L2NormalizedLinear(nn.Module):
     """Linear layer with L2 normalized weights (unit norm constraint)."""
@@ -358,8 +355,8 @@ class CrispNamModel(nn.Module):
         feature_idx: Optional[int | None] = None,
     ) -> dict:
         """Calculate feature importance based on the magnitude of
-        risk-specific projection outputs. 
-        
+        risk-specific projection outputs.
+
         With L2 normalized weights, this gives a fair
         comparison across features.
 
@@ -372,6 +369,7 @@ class CrispNamModel(nn.Module):
         -------
             Dictionary of feature importances by risk type
         """
+
         self.eval()
         device = next(self.parameters()).device
 

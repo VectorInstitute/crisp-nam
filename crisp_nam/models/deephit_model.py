@@ -51,6 +51,7 @@ class FCLayer(nn.Module):
             x = self.dropout(x)
         return x
 
+
 class FCNet(nn.Module):
     """Multi-layer fully connected network."""
 
@@ -76,7 +77,7 @@ class FCNet(nn.Module):
         # Hidden layers
         for i in range(num_layers):
             curr_dim = out_dim if (i == num_layers - 1 and out_dim) else h_dim
-            curr_act: Optional[nn.Module|None] = (
+            curr_act: Optional[nn.Module | None] = (
                 out_activation
                 if (i == num_layers - 1 and out_activation)
                 else activation
@@ -107,6 +108,7 @@ class FCNet(nn.Module):
             out: Tensor of shape (batch_size, out_dim)
         """
         return self.network(x)
+
 
 class DeepHit(nn.Module):
     """PyTorch implementation of DeepHit for competing risks survival analysis."""
@@ -153,7 +155,6 @@ class DeepHit(nn.Module):
         -------
             None
         """
-
         # Shared network
         self.shared_net = FCNet(
             in_dim=self.x_dim,
@@ -249,7 +250,6 @@ class DeepHit(nn.Module):
         -------
             loss: Torch.tensor
         """
-
         # Convert to PyTorch tensors if necessary
         if not isinstance(k, torch.Tensor):
             k = torch.tensor(k, device=out.device)
@@ -356,7 +356,6 @@ class DeepHit(nn.Module):
         -------
             loss: Torch.tensor
         """
-
         eta = []
 
         # Convert to PyTorch tensors if necessary
@@ -407,7 +406,6 @@ class DeepHit(nn.Module):
         -------
             total_loss: Torch.tensor
         """
-
         loss1 = self.log_likelihood_loss(out, t, k, mask1, mask2)
         loss2 = self.ranking_loss(out, t, k, mask2)
         loss3 = self.calibration_loss(out, t, k, mask2)
@@ -425,7 +423,6 @@ class DeepHit(nn.Module):
         -------
             out: Tensor of shape (batch_size, num_Event, num_Category)
         """
-
         self.eval()
         with torch.no_grad():
             out, _ = self.forward(x)

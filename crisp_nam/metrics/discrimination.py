@@ -9,7 +9,9 @@ import numpy as np
 
 from .ipcw import estimate_ipcw
 
+
 epsilon = 1e-10
+
 
 def auc_td(
     e_test: np.ndarray,
