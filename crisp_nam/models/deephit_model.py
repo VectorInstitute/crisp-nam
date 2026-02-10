@@ -15,10 +15,10 @@ class FCLayer(nn.Module):
         self,
         in_dim: int,
         out_dim: int,
-        activation: Optional[torch.Tensor] = None,
+        activation: Optional[nn.Module] = None,
         batch_norm: bool = False,
         dropout_rate: float = 0.0,
-        init_fn: Optional[Callable[[torch.Tensor]] | None] = nn.init.xavier_normal_,
+        init_fn: Optional[Callable | None] = nn.init.xavier_normal_,
     ) -> None:
         """Initialize the fully connected layer."""
         super(FCLayer, self).__init__()
@@ -51,7 +51,6 @@ class FCLayer(nn.Module):
             x = self.dropout(x)
         return x
 
-
 class FCNet(nn.Module):
     """Multi-layer fully connected network."""
 
@@ -60,12 +59,12 @@ class FCNet(nn.Module):
         in_dim: int,
         num_layers: int,
         h_dim: int,
-        activation: Optional[nn.module] = None,
+        activation: Optional[nn.Module] = None,
         out_dim: Optional[int | None] = None,
-        out_activation: Optional[int | None] = None,
+        out_activation: Optional[nn.Module | None] = None,
         batch_norm: bool = False,
         dropout_rate: float = 0.0,
-        init_fn: Optional[Callable[[torch.Tensor]] | None] = nn.init.xavier_normal_,
+        init_fn: Optional[Callable | None] = nn.init.xavier_normal_,
     ) -> None:
         """Initialize the fully connected network."""
         super(FCNet, self).__init__()
@@ -77,7 +76,7 @@ class FCNet(nn.Module):
         # Hidden layers
         for i in range(num_layers):
             curr_dim = out_dim if (i == num_layers - 1 and out_dim) else h_dim
-            curr_act = (
+            curr_act: Optional[nn.Module|None] = (
                 out_activation
                 if (i == num_layers - 1 and out_activation)
                 else activation
@@ -108,7 +107,6 @@ class FCNet(nn.Module):
             out: Tensor of shape (batch_size, out_dim)
         """
         return self.network(x)
-
 
 class DeepHit(nn.Module):
     """PyTorch implementation of DeepHit for competing risks survival analysis."""
@@ -145,7 +143,7 @@ class DeepHit(nn.Module):
         # Initialize networks
         self._build_network()
 
-    def _build_network(self):
+    def _build_network(self) -> None:
         """Build the shared and cause-specific networks.
 
         Args:
@@ -155,6 +153,7 @@ class DeepHit(nn.Module):
         -------
             None
         """
+
         # Shared network
         self.shared_net = FCNet(
             in_dim=self.x_dim,
@@ -236,7 +235,7 @@ class DeepHit(nn.Module):
         k: Optional[torch.Tensor | np.ndarray],
         mask1: torch.Tensor,
         mask2: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         """Log-likelihood loss (including log-likelihood of censored subjects).
 
         Args:
@@ -250,6 +249,7 @@ class DeepHit(nn.Module):
         -------
             loss: Torch.tensor
         """
+
         # Convert to PyTorch tensors if necessary
         if not isinstance(k, torch.Tensor):
             k = torch.tensor(k, device=out.device)
@@ -277,7 +277,7 @@ class DeepHit(nn.Module):
         t: Optional[torch.Tensor | np.ndarray],
         k: Optional[torch.Tensor | np.ndarray],
         mask2: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         """Ranking loss (calculated only for acceptable pairs).
 
         Args:
@@ -333,9 +333,9 @@ class DeepHit(nn.Module):
             eta.append(tmp_eta)
 
         eta = torch.stack(eta, dim=1)  # [batch_size, num_Event]
-        eta = torch.mean(eta.reshape(-1, self.num_Event), dim=1, keepdim=True)
+        eta_mean = torch.mean(eta.reshape(-1, self.num_Event), dim=1, keepdim=True)
 
-        return torch.sum(eta)
+        return torch.sum(eta_mean)
 
     def calibration_loss(
         self,
@@ -356,6 +356,7 @@ class DeepHit(nn.Module):
         -------
             loss: Torch.tensor
         """
+
         eta = []
 
         # Convert to PyTorch tensors if necessary
@@ -375,9 +376,9 @@ class DeepHit(nn.Module):
             eta.append(tmp_eta)
 
         eta = torch.stack(eta, dim=1)  # [1, num_Event]
-        eta = torch.mean(eta.reshape(-1, self.num_Event), dim=1, keepdim=True)
+        eta_mean = torch.mean(eta.reshape(-1, self.num_Event), dim=1, keepdim=True)
 
-        return torch.sum(eta)
+        return torch.sum(eta_mean)
 
     def compute_loss(
         self,
@@ -389,7 +390,7 @@ class DeepHit(nn.Module):
         alpha: float = 1.0,
         beta: float = 1.0,
         gamma: float = 1.0,
-    ):
+    ) -> torch.Tensor:
         """Compute total loss.
 
         Args:
@@ -406,6 +407,7 @@ class DeepHit(nn.Module):
         -------
             total_loss: Torch.tensor
         """
+
         loss1 = self.log_likelihood_loss(out, t, k, mask1, mask2)
         loss2 = self.ranking_loss(out, t, k, mask2)
         loss3 = self.calibration_loss(out, t, k, mask2)
@@ -423,6 +425,7 @@ class DeepHit(nn.Module):
         -------
             out: Tensor of shape (batch_size, num_Event, num_Category)
         """
+
         self.eval()
         with torch.no_grad():
             out, _ = self.forward(x)

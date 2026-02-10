@@ -1,4 +1,6 @@
-"""PyTorch implementation of CrispNamModel for competing risks
+"""CrispNamModel for competing-risks survival analysis.
+
+PyTorch implementation of CrispNamModel for competing risks
 survival analysis with L2 normalized projection weights.
 """
 
@@ -17,6 +19,7 @@ from torch import nn
 
 class FeatureNet(nn.Module):
     """Neural network to model the effect of a single feature on hazard.
+
     This is the building block for NAM with optional batch normalization.
     """
 
@@ -65,6 +68,7 @@ class FeatureNet(nn.Module):
         -------
             torch.Tensor
         """
+
         # ensure float32
         x = x.to(dtype=torch.float32)
         # Apply feature dropout during training if specified
@@ -102,11 +106,7 @@ class L2NormalizedLinear(nn.Module):
     """Linear layer with L2 normalized weights (unit norm constraint)."""
 
     def __init__(
-        self,
-        in_features: int,
-        out_features: int,
-        bias: bool = False,
-        eps: float = 1e-8
+        self, in_features: int, out_features: int, bias: bool = False, eps: float = 1e-8
     ) -> None:
         """Initialize the L2NormalizedLinear layer."""
         super(L2NormalizedLinear, self).__init__()
@@ -141,6 +141,7 @@ class L2NormalizedLinear(nn.Module):
 
 class CrispNamModel(nn.Module):
     """Competing risks CoxNAM with L2 normalized projection weights.
+
     Each feature contributes to each risk through a separate shape function.
     All projection weights are constrained to unit L2 norm.
     """
@@ -175,7 +176,7 @@ class CrispNamModel(nn.Module):
 
         # For each feature and risk type, create a projection layer
         if normalize_projections:
-            self.risk_projections = nn.ModuleList(
+            self.risk_projections: nn.ModuleList = nn.ModuleList(
                 [
                     nn.ModuleList(
                         [
@@ -200,9 +201,7 @@ class CrispNamModel(nn.Module):
                 ]
             )
 
-    def forward(self,
-        x: torch.Tensor
-        ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+    def forward(self, x: torch.Tensor) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """Forward pass to compute risk scores for all competing risks.
 
         Args:
@@ -213,6 +212,7 @@ class CrispNamModel(nn.Module):
             risk_scores: List of (batch_size, 1) Tensors
             feature_outputs: List of (batch_size, hidden) Tensors
         """
+
         # ensure float32
         x = x.to(dtype=torch.float32)
         batch_size, _ = x.shape
@@ -235,6 +235,7 @@ class CrispNamModel(nn.Module):
             repr = fnet(col)  # [batch, hidden]
             feature_outputs.append(repr)
 
+            proj: Optional[nn.ModuleList|None] = None
             # project into each risk channel with L2 normalized weights
             for risk_idx, proj in enumerate(self.risk_projections[feat_idx]):
                 # proj automatically applies L2 normalization
@@ -255,8 +256,7 @@ class CrispNamModel(nn.Module):
         risk_idx: Optional[int | None] = None,
         normalize: bool = True,
     ) -> dict:
-        """
-        Extract shape functions for a specific feature across all
+        """Extract shape functions for a specific feature across all
         risks or a specific risk.
 
         Args:
@@ -305,8 +305,7 @@ class CrispNamModel(nn.Module):
         return shape_funcs
 
     def get_projection_norms(self) -> dict:
-        """
-        Get the L2 norms of all projection weights (should be ~1.0 if normalized).
+        """Get the L2 norms of all projection weights (should be ~1.0 if normalized).
 
         Returns
         -------
