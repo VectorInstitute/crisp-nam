@@ -61,6 +61,7 @@ class FeatureNet(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the network.
+
         Args:
             x: Input tensor of shape
 
@@ -68,7 +69,7 @@ class FeatureNet(nn.Module):
         -------
             torch.Tensor
         """
-
+    
         # ensure float32
         x = x.to(dtype=torch.float32)
         # Apply feature dropout during training if specified
@@ -93,6 +94,7 @@ class FeatureNet(nn.Module):
         -------
             torch.Tensor
         """
+    
         was_training = self.training
         self.eval()
         with torch.no_grad():
@@ -212,7 +214,6 @@ class CrispNamModel(nn.Module):
             risk_scores: List of (batch_size, 1) Tensors
             feature_outputs: List of (batch_size, hidden) Tensors
         """
-
         # ensure float32
         x = x.to(dtype=torch.float32)
         batch_size, _ = x.shape
@@ -235,7 +236,7 @@ class CrispNamModel(nn.Module):
             repr = fnet(col)  # [batch, hidden]
             feature_outputs.append(repr)
 
-            proj: Optional[nn.ModuleList|None] = None
+            proj: Optional[nn.ModuleList | None] = None
             # project into each risk channel with L2 normalized weights
             for risk_idx, proj in enumerate(self.risk_projections[feat_idx]):
                 # proj automatically applies L2 normalization
@@ -357,8 +358,10 @@ class CrispNamModel(nn.Module):
         feature_idx: Optional[int | None] = None,
     ) -> dict:
         """Calculate feature importance based on the magnitude of
-        risk-specific projection outputs. With L2 normalized weights,
-        this gives a fair comparison across features.
+        risk-specific projection outputs. 
+        
+        With L2 normalized weights, this gives a fair
+        comparison across features.
 
         Args:
             x_data: Input data tensor or numpy array

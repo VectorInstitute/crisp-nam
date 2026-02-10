@@ -5,11 +5,12 @@ and shape functions for both crisp-nam and deephit models.
 """
 
 from typing import List, Union
-import matplotlib.pyplot as plt
 
-import torch
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import torch
+
 
 def plot_feature_importance(
     model: torch.nn.Module,
@@ -45,7 +46,6 @@ def plot_feature_importance(
     - top_pos: List of top positive feature names
     - top_neg: List of top negative feature names
     """
-
     # determine model device
     device = next(model.parameters()).device
     model.eval()
@@ -116,6 +116,7 @@ def plot_feature_importance(
 
     return fig, ax, top_pos, top_neg
 
+
 def plot_coxnam_shape_functions(
     model: torch.nn.Module,
     X: Union[np.ndarray, torch.Tensor],
@@ -144,7 +145,6 @@ def plot_coxnam_shape_functions(
     - fig: Matplotlib figure object
     - axes: List of Matplotlib axes objects for each plotted feature
     """
-
     device = next(model.parameters()).device
     model.eval()
     risk_idx = risk_to_plot - 1
