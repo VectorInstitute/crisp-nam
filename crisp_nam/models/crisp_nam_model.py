@@ -16,7 +16,6 @@ import numpy as np
 import torch.nn.functional as F
 from torch import nn
 
-
 class FeatureNet(nn.Module):
     """Neural network to model the effect of a single feature on hazard.
 
@@ -35,7 +34,6 @@ class FeatureNet(nn.Module):
         self.batch_norm = batch_norm
         layers: List[nn.Module] = []
 
-        # Input layer
         layers.append(nn.Linear(1, hidden_sizes[0]))
         if batch_norm:
             layers.append(nn.BatchNorm1d(hidden_sizes[0]))
@@ -246,61 +244,6 @@ class CrispNamModel(nn.Module):
         ]
 
         return risk_scores, feature_outputs
-
-    def get_shape_functions(
-        self,
-        x_values: Optional[torch.Tensor | np.ndarray],
-        feature_idx: int,
-        risk_idx: Optional[int | None] = None,
-        normalize: bool = True,
-    ) -> dict:
-        """Extract shape functions for a specific feature across all
-        risks or a specific risk.
-
-        Args:
-            x_values: Feature values to evaluate (numpy array or tensor)
-            feature_idx: Index of the feature to get shape functions for
-            risk_idx: Optional; if provided, only returns the
-            shape function for this risk
-            normalize: Whether to center the shape functions
-
-        Returns
-        -------
-            Dictionary mapping risk names to shape function values
-        """
-        self.eval()
-
-        if not isinstance(x_values, torch.Tensor):
-            x_values = torch.FloatTensor(x_values)
-
-        x_vals = x_values.view(-1, 1)
-
-        with torch.no_grad():
-            feature_repr = self.feature_nets[feature_idx](x_vals)
-
-            shape_funcs = {}
-
-            # If risk_idx is specified, only compute for that risk
-            risk_indices = (
-                [risk_idx] if risk_idx is not None else range(self.num_competing_risks)
-            )
-
-            for j in risk_indices:
-                # Apply the L2 normalized projection to get shape function values
-                values = (
-                    self.risk_projections[feature_idx][j](feature_repr)
-                    .cpu()
-                    .numpy()
-                    .flatten()
-                )
-
-                # Normalize if requested
-                if normalize:
-                    values = values - np.mean(values)
-
-                shape_funcs[f"risk_{j + 1}"] = values
-
-        return shape_funcs
 
     def get_projection_norms(self) -> dict:
         """Get the L2 norms of all projection weights (should be ~1.0 if normalized).

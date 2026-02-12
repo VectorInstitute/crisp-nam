@@ -122,7 +122,7 @@ def plot_coxnam_shape_functions(
     model: torch.nn.Module,
     X: Union[np.ndarray, torch.Tensor],
     risk_to_plot: int = 1,
-    feature_names: List[str] | None = None,
+    feature_names: np.ndarray | None = None,
     top_features: List[str] | None = None,
     ncols: int = 3,
     figsize: tuple = (12, 8),
@@ -155,9 +155,10 @@ def plot_coxnam_shape_functions(
 
     # derive feature list
     num_features = model.num_features
-    if feature_names:
+    print(f'{plot_coxnam_shape_functions.__name__}: top_features={top_features}')
+    if feature_names is None:
         feature_names = [f"Feature {i + 1}" for i in range(num_features)]
-    if top_features:
+    if top_features is not None :
         # map names back to indices
         idx_map = {name: i for i, name in enumerate(feature_names)}
         selected = [(idx_map.get(name), name) for name in top_features]
@@ -165,6 +166,8 @@ def plot_coxnam_shape_functions(
     else:
         selected = list(zip(range(num_features), feature_names))
 
+    print(f'{plot_coxnam_shape_functions.__name__}: num_features={num_features}, feature_names={feature_names}, top_features={top_features}')
+    print(f'{plot_coxnam_shape_functions.__name__}: selected={selected}')
     n_selected = len(selected)
     nrows = int(np.ceil(n_selected / ncols))
     fig, axes = plt.subplots(nrows, ncols, figsize=(figsize))
