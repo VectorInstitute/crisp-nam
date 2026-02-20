@@ -1,6 +1,6 @@
 {
     "support":{
-        "risk_1":{
+        "Cancer-specific mortality":{
             "adls":{
                 "values":[
                     2.9744531757,
@@ -92184,7 +92184,7 @@
                 }
             }
         },
-        "risk_2":{
+        "Death due to other causes":{
             "crea":{
                 "values":[
                     -0.3372967666,
@@ -184946,7 +184946,7 @@
         }
     },
     "framingham":{
-        "risk_1":{
+        "Cardiovascular disease":{
             "GLUCOSE":{
                 "values":[
                     0.104519774,
@@ -229190,7 +229190,7 @@
                 }
             }
         },
-        "risk_2":{
+        "Non-cardiovascular death":{
             "SEX":{
                 "values":[
                     1.0,
@@ -273244,7 +273244,7 @@
         }
     },
     "pbc":{
-        "risk_1":{
+        "Death on waiting list":{
             "drug_placebo":{
                 "values":[
                     0.0,
@@ -304007,7 +304007,7 @@
                 }
             }
         },
-        "risk_2":{
+        "Transplantation":{
             "hepatomegaly_Yes":{
                 "values":[
                     1.0,
