@@ -16,7 +16,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch import nn
 
-class FeatureNet(nn.Module):
+class _FeatureNet(nn.Module):
     """Neural network to model the effect of a single feature on hazard.
 
     This is the building block for NAM with optional batch normalization.
@@ -30,7 +30,7 @@ class FeatureNet(nn.Module):
         batch_norm: bool = False,
     ) -> None:
         """Initialize the FeatureNet."""
-        super(FeatureNet, self).__init__()
+        super(_FeatureNet, self).__init__()
         self.batch_norm = batch_norm
         layers: List[nn.Module] = []
 
@@ -99,14 +99,14 @@ class FeatureNet(nn.Module):
             self.train()
         return result
 
-class L2NormalizedLinear(nn.Module):
+class _L2NormalizedLinear(nn.Module):
     """Linear layer with L2 normalized weights (unit norm constraint)."""
 
     def __init__(
         self, in_features: int, out_features: int, bias: bool = False, eps: float = 1e-8
     ) -> None:
         """Initialize the L2NormalizedLinear layer."""
-        super(L2NormalizedLinear, self).__init__()
+        super(_L2NormalizedLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.eps = eps
@@ -166,7 +166,7 @@ class CrispNamModel(nn.Module):
         # Create a FeatureNet for each input feature
         self.feature_nets = nn.ModuleList(
             [
-                FeatureNet(hidden_sizes, dropout_rate, feature_dropout, batch_norm)
+                _FeatureNet(hidden_sizes, dropout_rate, feature_dropout, batch_norm)
                 for _ in range(num_features)
             ]
         )
@@ -177,7 +177,7 @@ class CrispNamModel(nn.Module):
                 [
                     nn.ModuleList(
                         [
-                            L2NormalizedLinear(hidden_sizes[-1], 1, bias=False, eps=eps)
+                            _L2NormalizedLinear(hidden_sizes[-1], 1, bias=False, eps=eps)
                             for _ in range(num_competing_risks)
                         ]
                     )
@@ -346,68 +346,6 @@ class CrispNamModel(nn.Module):
                     )
 
         return importance
-
-    def predict_risk(
-        self,
-        x: Optional[torch.Tensor | np.ndarray],
-        baseline_hazards: Optional[dict | None] = None,
-    ) -> dict:
-        """Predict survival probability or cumulative incidence.
-
-        Args:
-            x: Input tensor of shape (batch_size, num_features)
-            baseline_hazards: Optional dict of baseline hazards for each risk
-
-        Returns
-        -------
-            Dictionary of predictions for each competing risk
-        """
-        self.eval()
-
-        # Convert to tensor if needed
-        if not isinstance(x, torch.Tensor):
-            x = torch.FloatTensor(x)
-
-        with torch.no_grad():
-            risk_scores, _ = self(x)
-
-            # Convert scores to hazard ratios
-            hazard_ratios = [torch.exp(score).cpu().numpy() for score in risk_scores]
-
-            # If baseline hazards are provided, compute absolute risks
-            if baseline_hazards is not None:
-                predictions = {}
-
-                for j in range(self.num_competing_risks):
-                    risk_name = f"risk_{j + 1}"
-
-                    # Baseline survival and hazard
-                    baseline_surv = baseline_hazards.get(risk_name, {}).get(
-                        "survival", None
-                    )
-                    baseline_haz = baseline_hazards.get(risk_name, {}).get(
-                        "hazard", None
-                    )
-
-                    if baseline_surv is not None:
-                        # Compute survival probability: S(t|x) = S0(t)^exp(f(x))
-                        predictions[f"{risk_name}_survival"] = np.power(
-                            baseline_surv.reshape(1, -1),
-                            hazard_ratios[j].reshape(-1, 1),
-                        )
-
-                    if baseline_haz is not None:
-                        # Compute cumulative hazard: H(t|x) = H0(t) * exp(f(x))
-                        predictions[f"{risk_name}_cumhazard"] = baseline_haz.reshape(
-                            1, -1
-                        ) * hazard_ratios[j].reshape(-1, 1)
-
-                return predictions
-            # Without baseline hazards, just return hazard ratios
-            return {
-                f"risk_{j + 1}_hazard_ratio": hazard_ratios[j]
-                for j in range(self.num_competing_risks)
-            }
 
     # Utility functions for model analysis
     def analyze_projection_weights(self) -> dict:

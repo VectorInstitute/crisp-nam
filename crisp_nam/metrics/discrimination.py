@@ -86,7 +86,6 @@ def auc_td(
     auc_value = auc_numerator / auc_denominator if auc_denominator > 0 else np.nan
     return auc_value, km
 
-
 def cumulative_dynamic_auc(
     e_test: np.ndarray,
     t_test: np.ndarray,

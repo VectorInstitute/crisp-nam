@@ -1,5 +1,6 @@
-from torch.utils.data import Dataset
 import torch
+from torch.utils.data import Dataset
+
 
 class SurvivalDataset(Dataset):
     def __init__(self, x, t, e):
