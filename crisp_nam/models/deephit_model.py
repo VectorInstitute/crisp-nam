@@ -35,7 +35,8 @@ class FCLayer(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the layer.
 
-        Args:
+        Parameters
+        ----------
             x: Tensor of shape (batch_size, in_dim)
 
         Returns
@@ -100,7 +101,8 @@ class FCNet(nn.Module):
     def forward(self, x: torch.Tensor) -> Optional[nn.Module]:
         """Forward pass through the network.
 
-        Args:
+        Parameters
+        -----------
             x: Tensor of shape (batch_size, in_dim)
 
         Returns
@@ -148,7 +150,8 @@ class DeepHit(nn.Module):
     def _build_network(self) -> None:
         """Build the shared and cause-specific networks.
 
-        Args:
+        Parameters
+        ----------
             None
 
         Returns
@@ -187,7 +190,8 @@ class DeepHit(nn.Module):
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, None]:
         """Forward pass through the network.
 
-        Args:
+        Parameters
+        ----------
             x: Tensor of shape (batch_size, num_Event, num_Category)
 
         Returns
@@ -229,7 +233,7 @@ class DeepHit(nn.Module):
         # In this model, we don't have separate shape functions, so just return None
         return out, None
 
-    def log_likelihood_loss(
+    def _log_likelihood_loss(
         self,
         out: torch.Tensor,
         t: Optional[torch.Tensor | np.ndarray],
@@ -239,7 +243,8 @@ class DeepHit(nn.Module):
     ) -> torch.Tensor:
         """Log-likelihood loss (including log-likelihood of censored subjects).
 
-        Args:
+        Parameters
+        ----------
             out: Torch.tensor
             t: Torch.tensor or numpy array
             k: Torch.tensor or numpy array
@@ -271,7 +276,7 @@ class DeepHit(nn.Module):
 
         return -torch.mean(tmp1 + tmp2)
 
-    def ranking_loss(
+    def _ranking_loss(
         self,
         out: torch.Tensor,
         t: Optional[torch.Tensor | np.ndarray],
@@ -280,7 +285,8 @@ class DeepHit(nn.Module):
     ) -> torch.Tensor:
         """Ranking loss (calculated only for acceptable pairs).
 
-        Args:
+        Parameters
+        ----------
             out: Torch.tensor
             t: Torch.tensor or numpy array
             k: Torch.tensor or numpy array
@@ -302,7 +308,6 @@ class DeepHit(nn.Module):
         one_vector = torch.ones_like(t)
 
         for e in range(self.num_Event):
-            # Indicator for current event type
             i_2 = (k == e + 1).float()
             i_2_diag = torch.diag(i_2.squeeze())
 
@@ -318,7 +323,7 @@ class DeepHit(nn.Module):
             r = r.transpose(0, 1)  # Now R_ij = r_i(T_i) - r_j(T_i)
 
             # Time comparison matrix
-            t = F.relu(
+            time = F.relu(
                 torch.sign(
                     torch.matmul(one_vector, t.transpose(0, 1))
                     - torch.matmul(t, one_vector.transpose(0, 1))
@@ -326,10 +331,10 @@ class DeepHit(nn.Module):
             )
 
             # Filter by event occurrence
-            t = torch.matmul(i_2_diag, t)
+            time = torch.matmul(i_2_diag, time)
 
             # Calculate ranking loss for current event
-            tmp_eta = torch.mean(t * torch.exp(-r / sigma1), dim=1, keepdim=True)
+            tmp_eta = torch.mean(time * torch.exp(-r / sigma1), dim=1, keepdim=True)
             eta.append(tmp_eta)
 
         eta = torch.stack(eta, dim=1)  # [batch_size, num_Event]
@@ -337,7 +342,7 @@ class DeepHit(nn.Module):
 
         return torch.sum(eta_mean)
 
-    def calibration_loss(
+    def _calibration_loss(
         self,
         out: torch.Tensor,
         t: Optional[torch.Tensor | np.ndarray],
@@ -346,7 +351,8 @@ class DeepHit(nn.Module):
     ) -> torch.Tensor:
         """Calibration loss.
 
-        Args:
+        Parameters
+        ----------
             out: Torch.tensor
             t: Torch.tensor or numpy array
             k: Torch.tensor or numpy array
@@ -392,7 +398,8 @@ class DeepHit(nn.Module):
     ) -> torch.Tensor:
         """Compute total loss.
 
-        Args:
+        Parameters
+        ----------
             out: Torch.tensor
             t: Torch.tensor or numpy array
             k: Torch.tensor or numpy array
@@ -406,9 +413,9 @@ class DeepHit(nn.Module):
         -------
             total_loss: Torch.tensor
         """
-        loss1 = self.log_likelihood_loss(out, t, k, mask1, mask2)
-        loss2 = self.ranking_loss(out, t, k, mask2)
-        loss3 = self.calibration_loss(out, t, k, mask2)
+        loss1 = self._log_likelihood_loss(out, t, k, mask1, mask2)
+        loss2 = self._ranking_loss(out, t, k, mask2)
+        loss3 = self._calibration_loss(out, t, k, mask2)
 
         # L2 regularization is handled by optimizer (weight_decay)
         return alpha * loss1 + beta * loss2 + gamma * loss3
@@ -416,7 +423,8 @@ class DeepHit(nn.Module):
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """Predict risk scores for input x.
 
-        Args:
+        Parameters
+        ----------
             x: Tensor of shape (batch_size, num_Event, num_Category)
 
         Returns

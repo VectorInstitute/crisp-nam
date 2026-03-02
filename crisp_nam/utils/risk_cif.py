@@ -58,7 +58,8 @@ def predict_cif(
     """
     Predict cumulative incidence function for a specific competing risk.
 
-    Args:
+    Parameters
+    ----------
         model: Trained  model.
         x: Input tensor of shape (n_samples, n_features).
         baseline_cif: Array of shape (len(times),) —
@@ -122,7 +123,8 @@ def predict_absolute_risk(
     """
     Predict absolute risk (CIF) for each competing event by given time points.
 
-    Args:
+    Parameters
+    ----------
         model: Trained  model.
         x_input (np.ndarray or Tensor): Input features, shape (n_samples, n_features).
         baseline_cifs (dict): Mapping of event index to baseline CIF

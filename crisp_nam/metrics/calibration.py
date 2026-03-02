@@ -12,7 +12,6 @@ from .ipcw import estimate_ipcw
 # A small constant to avoid division by zero
 epsilon = 1e-4
 
-
 def brier_score(
     e_test: np.ndarray,
     t_test: np.ndarray,

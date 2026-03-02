@@ -60,7 +60,7 @@ class _FeatureNet(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the network.
 
-        Args:
+        Parameters
             x: Input tensor of shape
 
         Returns
@@ -84,7 +84,8 @@ class _FeatureNet(nn.Module):
         """Handle the case of a single sample (batch_size=1)
         where BatchNorm1d would fail.
 
-        Args:
+        Parameters
+        -----------
             x: Input tensor of shape (1, num_features)
 
         Returns
@@ -119,7 +120,8 @@ class _L2NormalizedLinear(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Apply the linear transformation with L2 normalized weights.
 
-        Args:
+        Parameters
+        -----------
             x: Input tensor of shape (batch_size, in_features)
 
         Returns
@@ -201,7 +203,8 @@ class CrispNamModel(nn.Module):
     def forward(self, x: torch.Tensor) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """Forward pass to compute risk scores for all competing risks.
 
-        Args:
+        Parameters
+        -----------
             x: Tensor of shape (batch_size, num_features)
 
         Returns
@@ -303,7 +306,8 @@ class CrispNamModel(nn.Module):
         With L2 normalized weights, this gives a fair
         comparison across features.
 
-        Args:
+        Parameters
+        -----------
             x_data: Input data tensor or numpy array
             feature_idx: Optional; if provided, only calculate
             importance for this feature
@@ -351,7 +355,8 @@ class CrispNamModel(nn.Module):
     def analyze_projection_weights(self) -> dict:
         """Analyze the L2 norms and statistics of projection weights.
 
-        Args:
+        Parameters
+        -----------
             None
 
         Returns

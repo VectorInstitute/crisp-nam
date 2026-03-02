@@ -27,7 +27,8 @@ def plot_feature_importance(
     """Plot feature importance with both top positive and negative influences,
     handling both CPU and CUDA devices automatically.
 
-    Args:
+    Parameters
+    ----------
     - model: A trained CoxNAM model (torch.nn.Module)
     - x_data: Input data (numpy array or torch tensor) to compute contributions
     - feature_names: Optional list of feature names (default: generic names)
@@ -131,7 +132,8 @@ def plot_coxnam_shape_functions(
     """Plot shape functions for each feature in a CoxNAM model,
     automatically handling CPU vs CUDA inputs.
 
-    Args:
+    Parameters
+    ----------
     - model: A trained CoxNAM model (torch.nn.Module)
     - X: Input data (numpy array or torch tensor) to compute shape functions
     - risk_to_plot: Index of the competing risk to visualize

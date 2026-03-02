@@ -19,7 +19,8 @@ def weighted_negative_log_likelihood_loss(
     """
     Compute the weighted negative log-likelihood loss for competing risks Cox model.
 
-    Args:
+    Parameters
+    ----------
         risk_scores: List of tensors with shape (batch_size, 1) for each competing risk
         times: Event/censoring times (batch_size,)
         events: Event indicators (0=censored, 1...K=event types) (batch_size,)
@@ -96,7 +97,8 @@ def negative_log_likelihood_loss(
     """
     Compute the negative log-likelihood loss for competing risks Cox model.
 
-    Args:
+    Parameters
+    ----------
         risk_scores: List of tensors with shape (batch_size, 1) for each competing risk
         times: Event/censoring times (batch_size,)
         events: Event indicators (0=censored, 1...K=event types) (batch_size,)
@@ -154,7 +156,8 @@ def compute_l2_penalty(
     """
     Compute L2 regularization penalty on model parameters.
 
-    Args:
+    Parameters
+    ----------
         model: Neural network model
         include_bias: Whether to include bias terms in regularization
 
