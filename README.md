@@ -17,37 +17,7 @@ This repository provides a comprehensive framework for competing risks survival 
 - **Baseline Comparisons**: DeepHit implementation for benchmarking against state-of-the-art methods
 
 ### Available Datasets
-
-The repository includes four well-established survival analysis datasets:
-
-1. **Framingham Heart Study**: Cardiovascular disease prediction with competing events (CVD vs. death)
-   - Features: Demographics, clinical measurements, lifestyle factors
-   - Events: Cardiovascular disease, death from other causes
-
-2. **PBC (Primary Biliary Cirrhosis)**: Liver disease progression study
-   - Features: Clinical laboratory values, demographic information
-   - Events: Death, liver transplantation
-
-3. **SUPPORT**: Study to understand prognoses and preferences for outcomes
-   - Features: Comprehensive clinical and demographic variables
-   - Events: Cancer death, non-cancer death
-
-4. **Synthetic Dataset**: Controlled simulation for method validation
-   - Features: Simulated clinical variables with known ground truth
-   - Events: Multiple competing risks with controllable hazard functions
-
-All datasets come with preprocessing pipelines that handle missing values, feature encoding, and proper train/test splitting to prevent data leakage.
-
-### Training Scripts
-
-The repository provides several specialized training scripts:
-
-- **`train.py`**: Standard model training with cross-validation and comprehensive evaluation
-- **`train_nested_cv.py`**: Robust nested cross-validation for unbiased performance estimation
-- **`tune_optuna.py`**: Hyperparameter optimization using Optuna's advanced algorithms
-- **`train_deephit.py`**: DeepHit baseline implementation for comparative studies
-
-Each script supports extensive configuration through command-line arguments and YAML config files, enabling reproducible experiments and easy parameter sweeps.
+This repository includes 4 datasets: Framingham Heart Study, PBC, Support2 and Synthetic datasets. Detailed information is available in [datasets.md](./datasets.md).
 
 ## Requirements
 Python >=3.10
@@ -56,6 +26,7 @@ Python >=3.10
 
 ```
 crisp_nam/
+├── blog/                                   # Blog
 ├── crisp_nam/                              # Main package
 │   ├── metrics/
 │   │   ├── __init__.py
@@ -89,6 +60,7 @@ crisp_nam/
 │   ├── SurvivalDataset.py
 │   ├── synthetic_comprisk.csv
 │   └── synthetic_dataset.py
+├── docs/                                   # Documentation of Pypi package.
 ├── results/                                # Results and outputs
 │   ├── best_params/                        # Best parameters for dataset and model combinations
 │   │   ├── best_params_framingham_deephit.yaml
@@ -117,11 +89,6 @@ crisp_nam/
 │   ├── train.py
 │   ├── tune_optuna_optimized.py
 │   └── tune_optuna.py
-└── utils/                                  # Legacy utils (duplicate of crisp_nam/utils)
-    ├── __init__.py
-    ├── loss.py
-    ├── plotting.py
-    └── risk_cif.py
 ```
 
 ## Install from source
@@ -146,7 +113,20 @@ cd crisp-nam
 uv sync
 ```
 
-## Running training scripts
+## Training Scripts
+
+The repository provides several specialized training scripts:
+
+- **`train.py`**: Standard model training with cross-validation and comprehensive evaluation
+- **`train_nested_cv.py`**: Robust nested cross-validation for unbiased performance estimation
+- **`tune_optuna.py`**: Hyperparameter optimization using Optuna's advanced algorithms
+- **`tune_optuna_optimized.py`**: Hyperparameter optimization using Optuna on a GPU.
+- **`train_deephit.py`**: DeepHit baseline implementation for comparative studies
+- **`train_deephit_cuda.py`**: DeepHit baseline implementation optimized for running on a GPU.
+
+Each script supports extensive configuration through command-line arguments and YAML config files, enabling reproducible experiments and easy parameter sweeps.
+
+### Running training scripts
 
 1. Modify training parameters in `training_scripts/train.py`
    OR
@@ -162,65 +142,65 @@ uv sync
 
 2. Run the training script
 
-   via `python`
+   1. via `python`
    ```bash
    source .venv/bin/activate
    python training_scripts/train.py --dataset framingham
    ```
 
-   via `uv`
+   2. via `uv`
    ```bash
    uv run training_scripts/train.py --dataset framingham
    ```
 
-## Running Nested Cross-Validation
+### Running Nested Cross-Validation
 
 The nested cross-validation script performs robust model evaluation with hyperparameter optimization using inner and outer cross-validation loops. It automatically generates performance metrics, feature importance plots, and shape function visualizations.
 
-### Basic Usage
-
+via `python`
 ```bash
-# Using python
 python training_scripts/train_nested_cv.py --dataset framingham
+```
 
-# Using uv
+via `uv`
+```bash
 uv run training_scripts/train_nested_cv.py --dataset framingham
 ```
 
-### Configuration Parameters
+## Configuration Parameters
 
 All parameters can be passed via command line or specified in a YAML config file:
 
-#### Dataset Configuration
+1. Dataset Configuration
 - `--dataset` (str): Dataset to use (choices: `framingham`, `support`, `pbc`, `synthetic`, default: `framingham`)
 - `--scaling` (str): Data scaling method for continuous features (choices: `minmax`, `standard`, `none`, default: `standard`)
 
-#### Training Parameters
+2. Training Parameters
 - `--num_epochs` (int): Number of training epochs (default: `250`)
 - `--batch_size` (int): Batch size for training (default: `512`)
 - `--patience` (int): Patience for early stopping (default: `10`)
 
-#### Cross-Validation Configuration
+3. Cross-Validation Configuration
 - `--outer_folds` (int): Number of outer CV folds (default: `5`)
 - `--inner_folds` (int): Number of inner CV folds for hyperparameter tuning (default: `3`)
 - `--n_trials` (int): Number of Optuna trials per inner fold (default: `20`)
 
-#### Event Weighting
+4. Event Weighting
 - `--event_weighting` (str): Event weighting strategy (choices: `none`, `balanced`, `custom`, default: `none`)
 - `--custom_event_weights` (str): Custom weights for events (comma-separated, default: `None`)
 
-#### Other Parameters
+5. Other Parameters
 - `--seed` (int): Random seed for reproducibility (default: `42`)
 - `--config` (str): Path to YAML config file (default: looks for `config.yaml`)
 
 ### Examples
 
-#### Basic nested CV with default parameters:
+1. **Basic nested CV with default parameters:**
 ```bash
 python training_scripts/train_nested_cv.py --dataset pbc
 ```
 
-#### Customized nested CV with specific parameters:
+2. **Customized nested CV with specific parameters:**
 ```bash
 python training_scripts/train_nested_cv.py \
     --dataset support \
@@ -233,38 +213,39 @@ python training_scripts/train_nested_cv.py \
     --seed 123
 ```
 
-#### Using a config file:
+3. **Using a config file:**
 ```bash
 python training_scripts/train_nested_cv.py --config my_config.yaml
 ```
 
-### Output Files
+## Output Files
 
 The script generates several output files in the current directory:
 
-#### Performance Metrics
+1. **Performance Metrics**
 - `nested_cv_summary_metrics_{dataset}.csv`: Summary table with mean ± std metrics
 - `nested_cv_detailed_metrics_{dataset}.csv`: Detailed results for each fold
 - `nested_cv_metrics_{dataset}.xlsx`: Excel file with multiple sheets (Summary, Detailed, Metadata)
 - `nested_cv_raw_metrics_{dataset}.json`: Raw metrics dictionary for reproducibility
 
-#### Model Configuration
+2. **Model Configuration**
 - `nested_cv_best_params_{dataset}.yaml`: Aggregated best hyperparameters across all folds
 
-#### Visualizations
-Results are saved to `results/plots/`:
+3. **Visualizations**
 - `nested_cv_feature_importance_risk_{risk}_{dataset}.png`: Feature importance plots
 - `nested_cv_shape_functions_risk_{risk}_{dataset}.png`: Shape function plots for top features
 
-### Evaluation Metrics
+Results are saved to `results/plots/`:
+
+## Evaluation Metrics
 
 The script computes the following metrics at different time quantiles (25%, 50%, 75%):
 
-- **AUC (Area Under the ROC Curve)**: Time-dependent AUC for discrimination
+1. **AUC (Area Under the ROC Curve)**: Time-dependent AUC for discrimination
   - 0.5 = random, >0.7 = good, >0.8 = excellent
-- **TDCI (Time-Dependent Concordance Index)**: Harrell's C-index adapted for competing risks
+2. **TDCI (Time-Dependent Concordance Index)**: Harrell's C-index adapted for competing risks
   - 0.5 = random, >0.7 = good, >0.8 = excellent
-- **Brier Score**: Calibration metric measuring prediction accuracy
+3. **Brier Score**: Calibration metric measuring prediction accuracy
   - 0 = perfect, <0.25 = good, >0.25 = poor
 
 > [!NOTE]
