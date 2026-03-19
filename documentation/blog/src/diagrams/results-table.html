@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRISP-NAM Results Table</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: transparent;
+    }
+
+    table-container {
+      margin: 20px 0;
+      overflow-x: visible;
+      max-height: none !important;
+      overflow: visible;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      table-layout: auto; /* allow columns to expand */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-size: 14px;
+    }
+    
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    th {
+      background-color: #f5f5f5;
+      font-weight: 600;
+      color: #333;
+      text-align: center;
+    }
+    
+    td {
+      text-align: center;
+    }
+    
+    td:first-child {
+      font-weight: 600;
+      text-align: left;
+      background-color: #fafafa;
+    }
+    
+    .risk-header {
+      background-color: #e3f2fd;
+      font-weight: 700;
+      color: #1565c0;
+      font-size: 15px;
+      text-align: left;
+      padding: 14px 16px;
+    }
+    
+    tr:hover td {
+      background-color: #f9f9f9;
+    }
+    
+    tr:hover td:first-child {
+      background-color: #f0f0f0;
+    }
+    
+    .best-score {
+      font-weight: 700;
+      color: #2e7d32;
+    }
+    
+    caption {
+      caption-side: bottom;
+      padding: 10px;
+      font-style: italic;
+      color: #666;
+      font-size: 13px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr class="risk-header">
+          <th colspan="4">Risk 1: Death due to Cancer</th>
+        </tr>
+        <tr>
+          <th>Model</th>
+          <th>TD-AUC</th>
+          <th>TD-CI</th>
+          <th>Brier Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>CRISP-NAM</td>
+          <td class="best-score">0.802 ± 0.092</td>
+          <td class="best-score">0.624 ± 0.029</td>
+          <td>0.380 ± 0.242</td>
+        </tr>
+        <tr>
+          <td>DeepHIT</td>
+          <td>0.640 ± 0.222</td>
+          <td>0.540 ± 0.010</td>
+          <td class="best-score">0.089 ± 0.002</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr class="risk-header">
+          <th colspan="4">Risk 2: Death due to Other Causes</th>
+        </tr>
+        <tr>
+          <th>Model</th>
+          <th>TD-AUC</th>
+          <th>TD-CI</th>
+          <th>Brier Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>CRISP-NAM</td>
+          <td>0.838 ± 0.179</td>
+          <td>0.713 ± 0.097</td>
+          <td>0.308 ± 0.188</td>
+        </tr>
+        <tr>
+          <td>DeepHIT</td>
+          <td class="best-score">0.893 ± 0.069</td>
+          <td class="best-score">0.745 ± 0.005</td>
+          <td class="best-score">0.144 ± 0.006</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
