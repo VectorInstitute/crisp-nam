@@ -61,6 +61,7 @@ repo_url: https://github.com/VectorInstitute/crisp-nam
 repo_name: VectorInstitute/crisp-nam
 site_name: CRISP-NAM Documentation
 site_url: https://vectorinstitute.github.io/crisp-nam-docs/
+docs_dir: documentation/docs
 theme:
   name: material
   custom_dir: documentation/docs/overrides
