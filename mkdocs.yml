@@ -63,7 +63,7 @@ site_name: CRISP-NAM Documentation
 site_url: https://vectorinstitute.github.io/crisp-nam-docs/
 theme:
   name: material
-  custom_dir: docs/overrides
+  custom_dir: documentation/docs/overrides
   favicon: assets/favicon-48x48.svg
   features:
     - content.code.annotate

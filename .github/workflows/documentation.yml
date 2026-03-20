@@ -21,7 +21,7 @@ jobs:
               with:
                 node-version: 'latest'
                 cache: 'npm'
-                cache-dependency-path: blog/package-lock.json
+                cache-dependency-path: documentation/blog/package-lock.json
         
             - name: Install dependencies
               run: cd documentation/blog && npm ci
