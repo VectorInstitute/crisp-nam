@@ -60,11 +60,10 @@ plugins:
 repo_url: https://github.com/VectorInstitute/crisp-nam
 repo_name: VectorInstitute/crisp-nam
 site_name: CRISP-NAM Documentation
-site_url: https://vectorinstitute.github.io/crisp-nam-docs/
-docs_dir: documentation/docs
+docs_dir: docs
 theme:
   name: material
-  custom_dir: documentation/docs/overrides
+  custom_dir: docs/overrides
   favicon: assets/favicon-48x48.svg
   features:
     - content.code.annotate
