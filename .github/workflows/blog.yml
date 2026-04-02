@@ -62,5 +62,5 @@ jobs:
       uses: JamesIves/github-pages-deploy-action@v4.8.0
       with:
           branch: gh-pages
-          folder: blog-build
+          folder: blog/public
           target-folder: blog
