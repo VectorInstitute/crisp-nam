@@ -2,7 +2,7 @@ name: Build and Deploy Blog
 
 on:
   push:
-    branches: [ "main", "feature/pypi" ]
+    branches: [ "main"]
   pull_request:
     branches: [ "main" ]
 
