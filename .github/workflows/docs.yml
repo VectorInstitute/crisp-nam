@@ -1,6 +1,7 @@
 name: docs
 permissions:
   contents: write
+  pages: write
   pull-requests: write
 
 on:
@@ -76,6 +77,12 @@ jobs:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pypi'
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v6.0.1
@@ -95,6 +102,7 @@ jobs:
         run: touch site/.nojekyll
 
       - name: Deploy to Github pages
+        id: deployment
         uses: JamesIves/github-pages-deploy-action@v4.8.0
         with:
           branch: gh-pages
