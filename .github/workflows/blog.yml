@@ -2,7 +2,7 @@ name: Build and Deploy Blog
 
 on:
   push:
-    branches: [ "main"]
+    branches: [ "main", "feature/pypi"]
   pull_request:
     branches: [ "main" ]
 
@@ -39,7 +39,7 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/pypi'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/pypi')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
