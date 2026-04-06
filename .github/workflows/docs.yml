@@ -40,7 +40,7 @@ on:
       - '**.svg'
 
 jobs:
-  build:
+  build-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -72,9 +72,32 @@ jobs:
           name: docs-site
           path: site/
           retention-days: 1
+  build-blog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+            node-version: 'latest'
+            cache: 'npm'
+            cache-dependency-path: blog/package-lock.json
+
+      - name: Install dependencies
+        run: cd blog && npm ci
+
+      - name: Build
+        run: cd ./blog && npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v6
+        with:
+            name: blog-build
+            path: blog/public
+            retention-days: 1
   deploy:
-    needs: build
+    needs: [build-docs, build-blog]
     if: github.event_name == 'push' &&  (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/pypi')
     runs-on: ubuntu-latest
     environment:
@@ -101,10 +124,18 @@ jobs:
       - name: Ensure .nojekyll exists
         run: touch site/.nojekyll
 
+      - name: Download blog artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: blog-build
+      - name: Move blog to site/blog
+        run: |
+          mkdir -p site/blog
+          mv blog/public/* site/blog/
+
       - name: Deploy to Github pages
         id: deployment
         uses: JamesIves/github-pages-deploy-action@v4.8.0
         with:
           branch: gh-pages
           folder: site
-          target-folder: docs

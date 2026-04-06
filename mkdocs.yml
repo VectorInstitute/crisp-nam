@@ -33,6 +33,7 @@ nav:
   - Home: index.md
   - API Reference: api.md
   - Usage: usage.md
+  - Blog: blog.md
 plugins:
   - search
   - mike:
