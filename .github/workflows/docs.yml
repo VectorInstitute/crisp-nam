@@ -97,7 +97,9 @@ jobs:
             path: blog/public
             retention-days: 1
   deploy:
-    needs: [build-docs, build-blog]
+    needs:
+      - build-docs
+      - build-blog
     if: github.event_name == 'push' &&  (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/pypi')
     runs-on: ubuntu-latest
     environment:
@@ -115,24 +117,20 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
-      - name: Download artifact
+      - name: Download docs artifact
         uses: actions/download-artifact@v7
         with:
           name: docs-site
           path: site
-
       - name: Ensure .nojekyll exists
         run: touch site/.nojekyll
-
+      - name: Create a folder for blog
+        run: mkdir -p site/blog
       - name: Download blog artifact
         uses: actions/download-artifact@v7
         with:
           name: blog-build
-      - name: Move blog to site/blog
-        run: |
-          mkdir -p site/blog
-          mv blog/public/* site/blog/
-
+          path: site/blog
       - name: Deploy to Github pages
         id: deployment
         uses: JamesIves/github-pages-deploy-action@v4.8.0
