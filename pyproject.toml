@@ -34,6 +34,9 @@ docs = [
     "click<=8.2.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/VectorInstitute/crisp-nam"
+
 [tool.mypy]
 follow_imports = "normal"
 ignore_missing_imports = false
