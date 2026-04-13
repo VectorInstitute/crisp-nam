@@ -42,9 +42,16 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
-        with:
-          artifacts: "dist/*"
-          generateReleaseNotes: true
+  release_github:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # To create a github release
+    steps:
+    - name: Create GitHub Release
+      id: create_release
+      uses: ncipollo/release-action@v1.21.0
+      with:
+        artifacts: "dist/*"
+        generateReleaseNotes: true
+  
