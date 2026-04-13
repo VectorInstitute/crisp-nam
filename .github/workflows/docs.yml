@@ -1,0 +1,138 @@
+name: docs
+permissions:
+  contents: write
+  pages: write
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .pre-commit-config.yaml
+      - .github/workflows/docs.yml
+      - '**.py'
+      - '**.ipynb'
+      - '**.html'
+      - '**.js'
+      - '**.md'
+      - uv.lock
+      - pyproject.toml
+      - mkdocs.yml
+      - '**.png'
+      - '**.svg'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .pre-commit-config.yaml
+      - .github/workflows/docs.yml
+      - '**.py'
+      - '**.ipynb'
+      - '**.js'
+      - '**.html'
+      - uv.lock
+      - pyproject.toml
+      - '**.md'
+      - mkdocs.yml
+      - '**.png'
+      - '**.svg'
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7.2.0
+        with:
+          version: "0.9.11"
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6.1.0
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install the project
+        run: uv sync --all-extras --group docs
+
+      - name: Build docs
+        run: uv run mkdocs build
+
+      - name: Create .nojekyll file
+        run: touch site/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-site
+          path: site/
+          retention-days: 1
+  build-blog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+            node-version: 'latest'
+            cache: 'npm'
+            cache-dependency-path: blog/package-lock.json
+
+      - name: Install dependencies
+        run: cd blog && npm ci
+
+      - name: Build
+        run: cd ./blog && npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v6
+        with:
+            name: blog-build
+            path: blog/public
+            retention-days: 1
+  deploy:
+    needs:
+      - build-docs
+      - build-blog
+    if: github.event_name == 'push' &&  github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.1
+
+      - name: Configure Git Credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Download docs artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: docs-site
+          path: site
+      - name: Ensure .nojekyll exists
+        run: touch site/.nojekyll
+      - name: Create a folder for blog
+        run: mkdir -p site/blog
+      - name: Download blog artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: blog-build
+          path: site/blog
+      - name: Deploy to Github pages
+        id: deployment
+        uses: JamesIves/github-pages-deploy-action@v4.8.0
+        with:
+          branch: gh-pages
+          folder: site

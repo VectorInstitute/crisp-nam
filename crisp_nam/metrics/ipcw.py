@@ -1,21 +1,25 @@
+"""IPCW estimation for time-to-event models with competing risks.
+
+This module provides a function to estimate the inverse probability of censoring weights (IPCW) using a
+Kaplan-Meier estimator.
+"""
+
 from lifelines import KaplanMeierFitter
 
-def estimate_ipcw(km):
-    """
-    Estimate the inverse probability of censoring weights (IPCW) using a Kaplan-Meier estimator.
 
-    Parameters:
-    -----------
+def estimate_ipcw(km: tuple | KaplanMeierFitter) -> KaplanMeierFitter:
+    """Estimate the inverse probability of censoring weights (IPCW)
+    using a Kaplan-Meier estimator.
+
+    Parameters
+    ----------
     km : tuple or KaplanMeierFitter
-        If `km` is a tuple, it should contain two elements:
-        - e_train: array-like, event indicators (1 if the event occurred, 0 if censored).
-        - t_train: array-like, corresponding event or censoring times.
-        If `km` is already a fitted KaplanMeierFitter instance, it will be used directly.
 
-    Returns:
-    --------
+    Returns
+    -------
     kmf : KaplanMeierFitter
-        A KaplanMeierFitter instance fitted to the provided data or the input instance if already fitted.
+        A KaplanMeierFitter instance fitted to the provided data or
+        the input instance if already fitted.
     """
     if isinstance(km, tuple):
         kmf = KaplanMeierFitter()
@@ -27,5 +31,3 @@ def estimate_ipcw(km):
     else:
         kmf = km
     return kmf
-
-
