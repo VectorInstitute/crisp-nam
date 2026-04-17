@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crisp-nam"
-version = "0.1.1"
+version = "0.1.2"
 description = "CRISP-NAM: Competing Risks Interpretable Survival Prediction with Neural Additive Models"
 readme = "README.md"
 requires-python = ">=3.10"
