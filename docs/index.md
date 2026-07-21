@@ -7,8 +7,9 @@ It includes the Python code for the following:
 - Models: `CRISP-NAM` and `DeepHIT`
 - Data loading utilities for 4 datasets: Framingham, PBC, Support2, Synthetic
 - Training scripts: Standard training, Hyperparameter optimization via Optuna, Nested cross validation
+- Risk models: Cause-specific hazards (default) and Fine-Gray subdistribution hazards, selectable via `--risk_model`
 - Metrics: Loss and risk functions for survival analysis.
-- Plotting: Feature importance and Shape functions for interpretability.
+- Plotting: Feature importance, Shape functions, and Cumulative hazard curves for interpretability.
 
 ## PyPI package
 The core files of research: models, metrics and plotting utilities.
