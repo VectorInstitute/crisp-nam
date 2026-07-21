@@ -18,6 +18,21 @@ This package provides a comprehensive framework for competing risks survival ana
 - **Multiple Training Modes**: Standard training, hyperparameter tuning, and nested cross-validation
 - **Baseline Comparisons**: DeepHit implementation for benchmarking against state-of-the-art methods
 
+## Recent Updates
+
+### Bug Fixes
+- Fixed PBC2 dataset loader treating every longitudinal visit as an independent sample instead of deduplicating to one row per patient.
+- Fixed SUPPORT dataset loader silently misclassifying ~14% of cancer patients as non-cancer deaths due to a fragile string-matching heuristic.
+- Fixed PBC2 categorical imputation being a silent no-op that never actually filled missing values.
+- Fixed continuous-feature imputation being fit on the full dataset before cross-validation splitting, which leaked validation-fold statistics into training (now fit per-fold, mirroring the existing per-fold feature scaling).
+- Fixed `tune_optuna_optimized.py` scaling continuous features on the full dataset before its train/validation split (same leakage issue, now fit per-split).
+- Removed unused duplicate dataset-loading files under `datasets/` that were dead code and contained the same bugs listed above.
+
+### New Features
+- Added a `--risk_model` option to select between cause-specific hazards and Fine-Gray subdistribution hazards during training.
+- Added cumulative hazard estimation and visualization (`compute_baseline_cumulative_hazard`, `predict_cumulative_hazard`, `plot_cumulative_hazard`) alongside the existing cumulative incidence function (CIF) visualizations.
+- Vectorized the competing-risks loss functions for substantially faster training with numerically identical results.
+
 ## Requirements
 
 Python >=3.10
