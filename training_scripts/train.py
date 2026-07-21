@@ -114,6 +114,15 @@ def parse_args():
     return parser.parse_args()
 
 
+# Maps (risk_model, weighted) -> loss function.
+_LOSS_FUNCTIONS = {
+    ("cause_specific", False): negative_log_likelihood_loss,
+    ("cause_specific", True): weighted_negative_log_likelihood_loss,
+    ("fine_gray", False): fine_gray_negative_log_likelihood,
+    ("fine_gray", True): weighted_fine_gray_negative_log_likelihood,
+}
+
+
 def train_model(
     model,
     train_loader,
@@ -129,34 +138,14 @@ def train_model(
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     early_stopper = EarlyStopping(patience=patience)
     device = next(model.parameters()).device
+    loss_fn = _LOSS_FUNCTIONS[(risk_model, event_weights is not None)]
 
     def compute_loss(risk_scores, t, e):
-        # Select the loss function based on the risk model formulation and
-        # whether per-event weighting is requested.
-        if risk_model == "fine_gray":
-            if event_weights is not None:
-                return weighted_fine_gray_negative_log_likelihood(
-                    risk_scores,
-                    t,
-                    e,
-                    model.num_competing_risks,
-                    event_weights=event_weights,
-                )
-            return fine_gray_negative_log_likelihood(
-                risk_scores, t, e, model.num_competing_risks
+        if event_weights is not None:
+            return loss_fn(
+                risk_scores, t, e, model.num_competing_risks, event_weights=event_weights
             )
-        else:
-            if event_weights is not None:
-                return weighted_negative_log_likelihood_loss(
-                    risk_scores,
-                    t,
-                    e,
-                    model.num_competing_risks,
-                    event_weights=event_weights,
-                )
-            return negative_log_likelihood_loss(
-                risk_scores, t, e, model.num_competing_risks
-            )
+        return loss_fn(risk_scores, t, e, model.num_competing_risks)
 
     for epoch in range(num_epochs):
         model.train()
