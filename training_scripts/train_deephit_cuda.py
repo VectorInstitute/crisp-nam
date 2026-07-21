@@ -10,6 +10,7 @@ from model_utils import (
     create_fc_mask2_gpu,
     set_seed,
 )
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sksurv.metrics import concordance_index_ipcw
@@ -694,18 +695,26 @@ def main():
 
     # Load the dataset
     if args.dataset.lower() == "framingham":
-        x, t, e, feature_names, n_cont, _ = load_framingham()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_framingham()
     elif args.dataset.lower() == "support":
-        x, t, e, feature_names, n_cont, _ = load_support_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_support_dataset()
     elif args.dataset.lower() == "pbc":
-        x, t, e, feature_names, n_cont, _ = load_pbc2_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_pbc2_dataset()
     elif args.dataset.lower() == "synthetic":
-        x, t, e, feature_names, n_cont, _ = load_synthetic_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_synthetic_dataset()
     else:
         raise ValueError(f"Dataset {args.dataset} not supported")
 
     # Convert data to tensors immediately before scaling
     device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # NOTE: this imputation (and the scaling below) is fit globally rather than
+    # per-fold, which leaks validation-fold statistics into training -- this
+    # pre-existing issue is out of scope for this fix (see train.py / tune_optuna.py
+    # for the correct per-fold pattern); this step only prevents a crash from the
+    # now-unimputed continuous columns returned by the data loaders.
+    if cont_impute_strategy is not None:
+        x[:, -n_cont:] = SimpleImputer(strategy=cont_impute_strategy).fit_transform(x[:, -n_cont:])
 
     # Scale features if needed (more efficiently)
     if args.scaling.lower() == "standard":

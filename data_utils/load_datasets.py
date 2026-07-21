@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,18 @@ def load_framingham(sequential=False):
     with imputation but no scaling. Feature normalization must be done externally
     after splitting to avoid data leakage.
 
+    Continuous-feature imputation is intentionally NOT done in this function.
+    Imputing continuous columns (e.g. mean-fill) on the full dataset before any
+    train/validation split leaks validation-fold statistics into the training
+    fold and vice versa -- the same class of leakage that per-fold scaling
+    already guards against elsewhere in this codebase. Continuous columns are
+    therefore returned with NaNs preserved, and callers must fit imputation
+    per-fold/per-split (mirroring the existing per-fold scaling pattern) using
+    the returned `continuous_impute_strategy`. Categorical columns are still
+    imputed here (mode/most-frequent imputation), since that carries much
+    lower leakage risk and correctly re-deriving one-hot column vocabulary
+    per-fold would be a much larger change for little benefit.
+
     Returns
     -------
         x (np.ndarray): Feature matrix with one-hot categorical + raw continuous features.
@@ -19,6 +31,9 @@ def load_framingham(sequential=False):
         feature_names (np.ndarray): Names of all features (categorical first, continuous after).
         n_continuous (int): Number of continuous features at the end of x.
         feature_ranges (None): Placeholder for backward compatibility.
+        continuous_impute_strategy (str): Imputation strategy to use for continuous
+            features, applied per-fold by the caller (not applied here) -- see
+            data-leakage note above.
     """
     file_path = "datasets/framingham.csv"
     data = pd.read_csv(file_path)
@@ -59,8 +74,10 @@ def load_framingham(sequential=False):
         )
         x_cat = pd.get_dummies(x_cat, drop_first=True)
 
-        cont_imputer = SimpleImputer(strategy="mean")
-        x_cont = cont_imputer.fit_transform(data[cont_cols])
+        x_cont = data[cont_cols].values.astype(float)  # raw; continuous imputation is deferred to
+                                                         # per-fold in the training scripts to avoid
+                                                         # leaking validation-fold statistics (mirrors
+                                                         # how per-fold scaling already works)
 
         x = np.hstack([x_cat.values, x_cont])
         feature_names = np.concatenate([x_cat.columns.values, cont_cols])
@@ -84,10 +101,11 @@ def load_framingham(sequential=False):
         t = time[valid] + 1
         e = event[valid]
 
-        # Sanity check
-        assert not np.isnan(x).any(), "NaNs found in feature matrix"
+        # Sanity check: only the (globally-imputed) categorical portion should be NaN-free here.
+        # Continuous columns intentionally still contain NaN -- see comment above.
+        assert not np.isnan(x_cat.values.astype(float)).any(), "NaNs found in categorical feature matrix"
 
-        return x, t, e, feature_names, n_continuous, None
+        return x, t, e, feature_names, n_continuous, None, "mean"
     raise NotImplementedError("Sequential mode not yet implemented.")
 
 
@@ -95,15 +113,21 @@ def load_pbc2_dataset():
     """
     Load and preprocess the PBC2 dataset for survival analysis.
 
-    The dataset is preprocessed to include both continuous and categorical features,
-    with missing values imputed. The function also constructs the outcome variable
-    for competing risks analysis and returns time-to-event data.
+    The dataset is preprocessed to include both continuous and categorical features.
+    Categorical features have missing values imputed here (most-frequent/mode
+    imputation). Continuous features are intentionally left un-imputed (NaNs
+    preserved): imputing them on the full dataset before any train/validation
+    split would leak validation-fold statistics into the training fold, so
+    imputation is deferred to the caller, which must fit it per-fold/per-split
+    (the same fit-on-train-only pattern already used for per-fold scaling).
+    The function also constructs the outcome variable for competing risks
+    analysis and returns time-to-event data.
 
     Returns
     -------
         tuple: A tuple containing the following elements:
             - x (numpy.ndarray): Combined feature matrix with categorical features
-              one-hot encoded and continuous features imputed.
+              one-hot encoded and continuous features raw (NaNs preserved).
             - t (numpy.ndarray): Time-to-event data in days.
             - event_type (numpy.ndarray): Event type array where:
                 0 = censored,
@@ -112,9 +136,26 @@ def load_pbc2_dataset():
             - feature_names (numpy.ndarray): Array of feature names.
             - n_continuous (int): Number of continuous features.
             - feature_ranges (list of tuple): List of (min, max) ranges for each feature.
+            - continuous_impute_strategy (str): Imputation strategy to use for
+              continuous features, applied per-fold by the caller (not applied
+              here) -- see data-leakage note above.
     """
     file_path = "datasets/pbc2.csv"
     data = pd.read_csv(file_path)
+
+    # PBC2 is a longitudinal dataset: most patients have multiple visit-rows
+    # (mean ~6.2, up to 16) that all share the same outcome (years, status)
+    # but differ in their covariate values. Without deduplication each visit
+    # is treated as an independent subject, which both violates the i.i.d.
+    # assumption the model relies on and lets the same patient's rows land
+    # in both the train and validation cross-validation splits. Keep only
+    # each patient's earliest (baseline) visit, mirroring load_framingham's
+    # per-patient deduplication.
+    data = (
+        data.sort_values(["id", "year"])
+        .drop_duplicates(subset="id", keep="first")
+        .reset_index(drop=True)
+    )
     data = data.drop(columns=["id", "sno.", "year", "status2"], axis=1)
 
     event_type = np.where(
@@ -134,15 +175,20 @@ def load_pbc2_dataset():
     ]
     x_cont = data[cont_cols].replace("NA", np.nan).astype(float)
 
-    mean_imputer = SimpleImputer(strategy="mean")
-    x_cont_imputed = mean_imputer.fit_transform(x_cont)
+    x_cont_raw = x_cont.values  # raw; continuous imputation deferred to per-fold in
+                                 # the training scripts to avoid leaking validation-fold
+                                 # statistics (mirrors per-fold scaling)
 
     cont_feature_ranges = list(
-        zip(np.nanmin(x_cont_imputed, axis=0), np.nanmax(x_cont_imputed, axis=0))
+        zip(np.nanmin(x_cont_raw, axis=0), np.nanmax(x_cont_raw, axis=0))
     )
 
     cat_cols = ["sex", "drug", "ascites", "hepatomegaly", "spiders", "edema"]
-    x_cat = data[cat_cols].fillna("missing")
+    # Let the imputer see real NaNs directly -- do not pre-fill with a
+    # "missing" placeholder string first, which would make the imputer a
+    # no-op (it only fills actual NaNs) and silently collapse missing rows
+    # into the one-hot reference category instead of the most-frequent one.
+    x_cat = data[cat_cols]
 
     cat_imputer = SimpleImputer(strategy="most_frequent")
     x_cat_imputed = cat_imputer.fit_transform(x_cat)
@@ -150,13 +196,9 @@ def load_pbc2_dataset():
 
     x_cat_encoded = pd.get_dummies(x_cat_df, drop_first=True)
 
-    x_cat_encoded = x_cat_encoded.loc[
-        :, ~x_cat_encoded.columns.str.contains("_missing")
-    ]
-
     cat_feature_ranges = [(0.0, 1.0)] * x_cat_encoded.shape[1]
 
-    x = np.hstack([x_cat_encoded.values, x_cont_imputed])
+    x = np.hstack([x_cat_encoded.values, x_cont_raw])
 
     feature_names = np.concatenate([x_cat_encoded.columns, cont_cols])
     n_continuous = len(cont_cols)
@@ -172,42 +214,56 @@ def load_pbc2_dataset():
         feature_names,
         n_continuous,
         feature_ranges,
+        "mean",
     )
 
 
 def load_support_dataset():
     """
     Load and preprocess the SUPPORT dataset.
-    This function reads the SUPPORT dataset from a CSV file, imputes missing values,
-    encodes categorical features, and constructs the outcome variable for survival analysis.
-    It returns the processed features, time-to-event data, event types, feature names,
-    the number of continuous features, and feature ranges.
+    This function reads the SUPPORT dataset from a CSV file, encodes categorical
+    features (imputing their missing values here), and constructs the outcome
+    variable for survival analysis. Continuous features are intentionally left
+    un-imputed (NaNs preserved): imputing them on the full dataset before any
+    train/validation split would leak validation-fold statistics into the
+    training fold, so imputation is deferred to the caller, which must fit it
+    per-fold/per-split (the same fit-on-train-only pattern already used for
+    per-fold scaling). It returns the processed features, time-to-event data,
+    event types, feature names, the number of continuous features, feature
+    ranges, and the recommended continuous-imputation strategy.
 
     Returns
     -------
         tuple: A tuple containing:
-            - x (numpy.ndarray): Combined array of processed categorical and continuous features.
+            - x (numpy.ndarray): Combined array of processed categorical (imputed)
+              and continuous (raw, NaNs preserved) features.
             - t (numpy.ndarray): Time-to-event data with a +1 offset.
             - event_type (numpy.ndarray): Event type array (0: censored, 1: cancer death, 2: non-cancer death).
             - feature_names (numpy.ndarray): Array of feature names.
             - n_continuous (int): Number of continuous features.
             - feature_ranges (list): List of tuples representing the range (min, max) for each feature.
+            - continuous_impute_strategy (str): Imputation strategy to use for
+              continuous features, applied per-fold by the caller (not applied
+              here) -- see data-leakage note above.
 
     Notes
     -----
         - The dataset file "support2.csv" must be located in the same directory as this script.
-        - Continuous features are imputed using the median strategy if missing values are present.
+        - Continuous features are NOT imputed here; see data-leakage note above.
         - Categorical features are imputed using the most frequent strategy if missing values are present.
         - One-hot encoding is applied to categorical features, dropping the first level to avoid the dummy variable trap.
-        - The outcome variable is constructed using the 'ca', 'dzgroup', and 'death' columns.
+        - The outcome variable is constructed using the 'ca' and 'death' columns.
         - Time-to-event data ('d.time') is offset by +1 to avoid zero follow-up times.
     """
     file_path = "datasets/support2.csv"
     data = pd.read_csv(file_path)
 
-    is_cancer = data["ca"].astype(str).str.lower().str.contains("meta") | data[
-        "dzgroup"
-    ].astype(str).str.lower().str.contains("cancer")
+    # 'ca' is the authoritative cancer-status field, with values
+    # {"no", "yes", "metastatic"}. Checking it directly (rather than a
+    # ca/dzgroup substring-matching heuristic) avoids missing non-metastatic
+    # cancer patients (ca == "yes") whose dzgroup label doesn't literally
+    # contain the word "cancer" (e.g. "MOSF w/Malig", "COPD", "Coma").
+    is_cancer = data["ca"].astype(str).str.lower() != "no"
     event_type = np.where(data["death"] == 1, np.where(is_cancer, 1, 2), 0)
 
     cont_cols = [
@@ -239,13 +295,11 @@ def load_support_dataset():
     ]
     x_cont = data[cont_cols]
 
-    if x_cont.isnull().values.any():
-        simp_imputer = SimpleImputer(strategy="median")
-        x_cont_imputed = simp_imputer.fit_transform(x_cont)
-    else:
-        x_cont_imputed = x_cont.values
+    x_cont_raw = x_cont.values  # raw; continuous imputation deferred to per-fold in
+                                 # the training scripts to avoid leaking validation-fold
+                                 # statistics (mirrors per-fold scaling)
     cont_feature_ranges = list(
-        zip(np.nanmin(x_cont_imputed, axis=0), np.nanmax(x_cont_imputed, axis=0))
+        zip(np.nanmin(x_cont_raw, axis=0), np.nanmax(x_cont_raw, axis=0))
     )
 
     # -- Categorical features --
@@ -262,7 +316,7 @@ def load_support_dataset():
     x_cat_encoded = pd.get_dummies(x_cat_df, drop_first=True)
     cat_feature_ranges = [(0.0, 1.0)] * x_cat_encoded.shape[1]
 
-    x = np.hstack([x_cat_encoded.values, x_cont_imputed])
+    x = np.hstack([x_cat_encoded.values, x_cont_raw])
     feature_names = np.concatenate([x_cat_encoded.columns, cont_cols])
     n_continuous = len(cont_cols)
     feature_ranges = cat_feature_ranges + cont_feature_ranges
@@ -270,7 +324,7 @@ def load_support_dataset():
     t = data["d.time"].values
     valid = ~np.isnan(t)
 
-    print("Completed imputation of missing values.")
+    print("Completed imputation of categorical missing values.")
 
     return (
         x[valid],
@@ -279,11 +333,12 @@ def load_support_dataset():
         feature_names,
         n_continuous,
         feature_ranges,
+        "median",
     )
 
 
 def load_synthetic_dataset() -> Tuple[
-    np.ndarray, np.ndarray, np.ndarray, List[str], int, List[tuple]
+    np.ndarray, np.ndarray, np.ndarray, List[str], int, List[tuple], Optional[str]
 ]:
     """
     Loads a synthetic competing risks dataset from a CSV file.
@@ -295,6 +350,10 @@ def load_synthetic_dataset() -> Tuple[
       - true_label: (optional) true event label (unused here)
       - feature1, feature2, ..., featureN: feature values
 
+    This dataset has no missing data, so there is nothing to impute; the
+    returned `continuous_impute_strategy` is always `None` to signal to
+    callers that no imputation is needed/applicable.
+
     Returns
     -------
         X (np.ndarray): Feature matrix of shape (n_samples, n_features).
@@ -303,6 +362,8 @@ def load_synthetic_dataset() -> Tuple[
         feature_names (List[str]): List of feature names.
         n_continuous (int): Total number of continuous features.
         feature_ranges (List[tuple]): List of (min, max) tuples for each feature.
+        continuous_impute_strategy (Optional[str]): Always None -- this dataset
+            has no missing continuous values, so no imputation is applicable.
     """
     file_path = "datasets/synthetic_comprisk.csv"
     df = pd.read_csv(file_path)
@@ -320,4 +381,4 @@ def load_synthetic_dataset() -> Tuple[
         (float(X[:, i].min()), float(X[:, i].max())) for i in range(n_continuous)
     ]
 
-    return X, T_obs, e, feature_names, n_continuous, feature_ranges
+    return X, T_obs, e, feature_names, n_continuous, feature_ranges, None

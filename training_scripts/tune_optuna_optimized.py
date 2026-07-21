@@ -6,6 +6,7 @@ import optuna
 import torch
 import yaml
 from model_utils import EarlyStopping, set_seed
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sksurv.metrics import brier_score, concordance_index_ipcw, cumulative_dynamic_auc
@@ -243,31 +244,45 @@ def main():
 
     # Load dataset
     if args.dataset == "framingham":
-        x, t, e, feature_names, n_cont, _ = load_framingham()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_framingham()
     elif args.dataset == "support":
-        x, t, e, feature_names, n_cont, _ = load_support_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_support_dataset()
     elif args.dataset == "pbc":
-        x, t, e, feature_names, n_cont, _ = load_pbc2_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_pbc2_dataset()
     else:
-        x, t, e, feature_names, n_cont, _ = load_synthetic_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_synthetic_dataset()
 
-    # Scale continuous features
-    if args.scaling == "standard":
-        x[:, -n_cont:] = StandardScaler().fit_transform(x[:, -n_cont:])
-    elif args.scaling == "minmax":
-        x[:, -n_cont:] = MinMaxScaler().fit_transform(x[:, -n_cont:])
-
-    # Bulk convert to torch tensors on CPU
-    X = torch.from_numpy(x.astype("float32"))
-    T = torch.from_numpy(t.astype("float32"))
-    E = torch.from_numpy(e.astype("int64"))
-
-    # Train/validation split (fixed)
+    # Train/validation split (fixed) -- done before imputation/scaling to prevent
+    # validation-set statistics leaking into the fitted imputer/scaler
     idx_train, idx_val = train_test_split(
         np.arange(len(e)), test_size=0.2, random_state=args.seed, stratify=e
     )
-    train_ds = TensorDataset(X[idx_train], T[idx_train], E[idx_train])
-    val_ds = TensorDataset(X[idx_val], T[idx_val], E[idx_val])
+    x_train, x_val = x[idx_train].copy(), x[idx_val].copy()
+
+    # Impute continuous features per-split (fit on train only) to avoid leakage
+    if cont_impute_strategy is not None:
+        cont_imputer = SimpleImputer(strategy=cont_impute_strategy)
+        x_train[:, -n_cont:] = cont_imputer.fit_transform(x_train[:, -n_cont:])
+        x_val[:, -n_cont:] = cont_imputer.transform(x_val[:, -n_cont:])
+
+    # Scale continuous features per-split (fit on train only) to avoid leakage
+    if args.scaling == "standard":
+        scaler = StandardScaler()
+        x_train[:, -n_cont:] = scaler.fit_transform(x_train[:, -n_cont:])
+        x_val[:, -n_cont:] = scaler.transform(x_val[:, -n_cont:])
+    elif args.scaling == "minmax":
+        scaler = MinMaxScaler()
+        x_train[:, -n_cont:] = scaler.fit_transform(x_train[:, -n_cont:])
+        x_val[:, -n_cont:] = scaler.transform(x_val[:, -n_cont:])
+
+    # Bulk convert to torch tensors on CPU
+    X_train = torch.from_numpy(x_train.astype("float32"))
+    X_val = torch.from_numpy(x_val.astype("float32"))
+    T = torch.from_numpy(t.astype("float32"))
+    E = torch.from_numpy(e.astype("int64"))
+
+    train_ds = TensorDataset(X_train, T[idx_train], E[idx_train])
+    val_ds = TensorDataset(X_val, T[idx_val], E[idx_val])
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_competing_risks = len(np.unique(e)) - 1
@@ -350,7 +365,7 @@ def main():
     }
     metrics = evaluate_model(
         final_model,
-        x[idx_val],
+        x_val,
         t[idx_val],
         e[idx_val],
         t[idx_train],

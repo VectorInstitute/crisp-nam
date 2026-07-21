@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 from model_utils import EarlyStopping, set_seed
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sksurv.metrics import concordance_index_ipcw
@@ -479,13 +480,13 @@ def main():
 
     # Load the dataset
     if args.dataset.lower() == "framingham":
-        x, t, e, feature_names, n_cont, _ = load_framingham()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_framingham()
     elif args.dataset.lower() == "support":
-        x, t, e, feature_names, n_cont, _ = load_support_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_support_dataset()
     elif args.dataset.lower() == "pbc":
-        x, t, e, feature_names, n_cont, _ = load_pbc2_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_pbc2_dataset()
     elif args.dataset.lower() == "synthetic":
-        x, t, e, feature_names, n_cont, _ = load_synthetic_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_synthetic_dataset()
     else:
         raise ValueError(f"Dataset {args.dataset} not supported")
 
@@ -554,6 +555,12 @@ def main():
         x_train, x_val = x[train_idx].copy(), x[val_idx].copy()
         t_train, t_val = t[train_idx], t[val_idx]
         e_train, e_val = e[train_idx], e[val_idx]
+
+        # Impute continuous features per-fold (fit on train only) to avoid leakage
+        if cont_impute_strategy is not None:
+            cont_imputer = SimpleImputer(strategy=cont_impute_strategy)
+            x_train[:, -n_cont:] = cont_imputer.fit_transform(x_train[:, -n_cont:])
+            x_val[:, -n_cont:] = cont_imputer.transform(x_val[:, -n_cont:])
 
         # Apply scaling within this fold to prevent data leakage
         if args.scaling.lower() == "standard":
