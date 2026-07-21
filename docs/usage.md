@@ -70,3 +70,11 @@ if __name__ == "__main__":
     out = model.predict(test_data)
     print("Output shape:", out.shape)
 ```
+
+## Training script options
+
+`training_scripts/train.py` exposes a `--risk_model` CLI option (`cause_specific`,
+the default, or `fine_gray`) that selects the competing-risks loss formulation
+used during training: cause-specific hazards treat each cause's risk set
+independently, while Fine-Gray subdistribution hazards keep subjects who
+experience a competing event in every other cause's risk set.

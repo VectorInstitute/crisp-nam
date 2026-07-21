@@ -124,3 +124,6 @@ max-doc-length = 88
 
 [tool.hatch.build.targets.sdist]
 only-include = ["crisp_nam"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
