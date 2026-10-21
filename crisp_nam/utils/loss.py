@@ -7,7 +7,7 @@ negative log-likelihood loss, L2 penalty loss functions.
 import torch
 
 
-def _masked_log_risk_sums(risk_k, at_risk):
+def _masked_log_risk_sums(risk_k, at_risk, log_weights=None):
     """
     Compute per-row logsumexp of `risk_k` restricted to each row's risk set.
 
@@ -16,6 +16,8 @@ def _masked_log_risk_sums(risk_k, at_risk):
         risk_k: Tensor of shape (batch_size,) with risk scores for one competing risk
         at_risk: Boolean tensor of shape (batch_size, batch_size); at_risk[i, j] is
         True if sample j is in sample i's risk set
+        log_weights: Optional tensor of shape (batch_size, batch_size) with the log
+        weight of sample j in sample i's risk set
 
     Returns
     -------
@@ -23,10 +25,70 @@ def _masked_log_risk_sums(risk_k, at_risk):
     """
     neg_inf = torch.finfo(risk_k.dtype).min
     masked_scores = risk_k.unsqueeze(0).expand(at_risk.shape[0], -1)
+    if log_weights is not None:
+        masked_scores = masked_scores + log_weights
     masked_scores = torch.where(
         at_risk, masked_scores, torch.full_like(masked_scores, neg_inf)
     )
     return torch.logsumexp(masked_scores, dim=1)
+
+
+def _censoring_survival_before(times, events):
+    """
+    Kaplan-Meier estimate of the censoring survival G(t-) at each sample's own time.
+
+    Estimated from the batch itself; subjects with an event at a censoring
+    time count as still at risk of censoring at that time (matching
+    `crisp_nam.utils.risk_cif.censoring_survival_before`).
+
+    Parameters
+    ----------
+        times: Event/censoring times (batch_size,)
+        events: Event indicators (0=censored, 1...K=event types) (batch_size,)
+
+    Returns
+    -------
+        Tensor of shape (batch_size,) with G(times[i]-)
+    """
+    cens_times, n_cens = torch.unique(times[events == 0], return_counts=True)
+    if cens_times.numel() == 0:
+        return torch.ones_like(times, dtype=torch.float)
+    n_at_risk = (times.unsqueeze(0) >= cens_times.unsqueeze(1)).sum(dim=1)
+    log_factors = torch.log1p(-n_cens.float() / n_at_risk.float())  # (C,)
+    before = cens_times.unsqueeze(0) < times.unsqueeze(1)  # (batch, C)
+    log_surv = torch.where(before, log_factors, torch.zeros_like(log_factors)).sum(dim=1)
+    return torch.exp(log_surv)
+
+
+def _fine_gray_risk_set(times, events, k):
+    """
+    Subdistribution risk set and IPCW log-weights for cause k (Fine & Gray, 1999).
+
+    Sample j is in sample i's risk set if `times[j] >= times[i]` (weight 1),
+    or if j had a competing event (type != 0, != k) before `times[i]`, with
+    weight `G(times[i]-) / G(times[j]-)`, where G is the censoring survival
+    function. The weight accounts for competing-event subjects who would
+    have been censored by `times[i]` had they not had their event.
+
+    Returns
+    -------
+        at_risk: Boolean tensor (batch_size, batch_size)
+        log_weights: Tensor (batch_size, batch_size); 0 for subjects still at risk
+    """
+    log_cens_surv = torch.log(
+        torch.clamp(_censoring_survival_before(times, events), min=1e-12)
+    )
+    times_i = times.unsqueeze(1)  # (batch, 1)
+    times_j = times.unsqueeze(0)  # (1, batch)
+    still_at_risk = times_j >= times_i
+    is_competing_for_k = (events != 0) & (events != k)  # (batch,)
+    retained = is_competing_for_k.unsqueeze(0) & (times_j < times_i)
+    log_weights = torch.where(
+        retained,
+        log_cens_surv.unsqueeze(1) - log_cens_surv.unsqueeze(0),
+        torch.zeros_like(retained, dtype=log_cens_surv.dtype),
+    )
+    return still_at_risk | retained, log_weights
 
 
 def weighted_negative_log_likelihood_loss(
@@ -210,7 +272,9 @@ def fine_gray_negative_log_likelihood(
     (competing or otherwise), this function models the subdistribution hazard:
     subjects who experience a competing event (event type j != k, j != 0) are
     NOT removed from cause k's risk set. Instead they remain at risk for cause k
-    indefinitely after their competing event time, per Fine & Gray (1999). This
+    after their competing event time, down-weighted by the probability of
+    having remained uncensored, `G(t_i-) / G(t_j-)`, per Fine & Gray (1999),
+    with G the batch Kaplan-Meier censoring survival function. This
     retained-risk-set construction is what distinguishes the subdistribution
     hazard from the cause-specific hazard.
 
@@ -245,10 +309,6 @@ def fine_gray_negative_log_likelihood(
     if n_events == 0:
         return loss
 
-    times_i = times.unsqueeze(1)  # (batch, 1)
-    times_j = times.unsqueeze(0)  # (1, batch)
-    still_at_risk = times_j >= times_i  # standard risk set, at_risk[i, j]
-
     # Process each competing risk separately
     for k in range(1, num_competing_risks + 1):
         # Find samples with this event type
@@ -257,19 +317,15 @@ def fine_gray_negative_log_likelihood(
             continue
 
         # Fine-Gray extension: subjects who already had a competing event
-        # (event type j != k, j != 0) at or before t_i remain in the
-        # subdistribution risk set for cause k indefinitely.
-        is_competing_for_k = (events != 0) & (events != k)  # (batch,)
-        already_had_competing_event = is_competing_for_k.unsqueeze(0) & (
-            times_j <= times_i
-        )
-        at_risk = still_at_risk | already_had_competing_event
+        # (event type j != k, j != 0) remain in the subdistribution risk set
+        # for cause k, with IPCW weights.
+        at_risk, log_weights = _fine_gray_risk_set(times, events, k)
 
         # Get risk scores for this competing risk
         risk_k = risk_scores[k - 1].squeeze(-1)
 
         # Calculate log sum of exp of risk scores in each event's risk set
-        log_risk_sum = _masked_log_risk_sums(risk_k, at_risk)
+        log_risk_sum = _masked_log_risk_sums(risk_k, at_risk, log_weights)
         individual_loss = log_risk_sum - risk_k
         loss = loss + individual_loss[event_mask].sum()
 
@@ -294,7 +350,8 @@ def weighted_fine_gray_negative_log_likelihood(
     occurs (competing or otherwise), this function models the subdistribution
     hazard: subjects who experience a competing event (event type j != k, j != 0)
     are NOT removed from cause k's risk set. Instead they remain at risk for
-    cause k indefinitely after their competing event time, per Fine & Gray (1999).
+    cause k after their competing event time with IPCW weight
+    `G(t_i-) / G(t_j-)`, per Fine & Gray (1999).
     This retained-risk-set construction is what distinguishes the subdistribution
     hazard from the cause-specific hazard.
 
@@ -333,10 +390,6 @@ def weighted_fine_gray_negative_log_likelihood(
     if n_events == 0:
         return loss
 
-    times_i = times.unsqueeze(1)  # (batch, 1)
-    times_j = times.unsqueeze(0)  # (1, batch)
-    still_at_risk = times_j >= times_i  # standard risk set, at_risk[i, j]
-
     # Process each competing risk separately
     for k in range(1, num_competing_risks + 1):
         # Find samples with this event type
@@ -345,13 +398,9 @@ def weighted_fine_gray_negative_log_likelihood(
             continue
 
         # Fine-Gray extension: subjects who already had a competing event
-        # (event type j != k, j != 0) at or before t_i remain in the
-        # subdistribution risk set for cause k indefinitely.
-        is_competing_for_k = (events != 0) & (events != k)
-        already_had_competing_event = is_competing_for_k.unsqueeze(0) & (
-            times_j <= times_i
-        )
-        at_risk = still_at_risk | already_had_competing_event
+        # (event type j != k, j != 0) remain in the subdistribution risk set
+        # for cause k, with IPCW weights.
+        at_risk, log_weights = _fine_gray_risk_set(times, events, k)
 
         # Get risk scores for this competing risk
         risk_k = risk_scores[k - 1].squeeze(-1)
@@ -360,7 +409,7 @@ def weighted_fine_gray_negative_log_likelihood(
         event_weight = event_weights[k - 1]
 
         # Calculate log sum of exp of risk scores in each event's risk set
-        log_risk_sum = _masked_log_risk_sums(risk_k, at_risk)
+        log_risk_sum = _masked_log_risk_sums(risk_k, at_risk, log_weights)
 
         # Subtract individual risk score from log sum and apply weights
         individual_loss = log_risk_sum - risk_k

@@ -68,7 +68,10 @@ def auc_td(
     else:
         km = estimate_ipcw(km)
         weights_event = 1.0 / np.clip(km.predict(t_test[event_mask]), epsilon, 1.0)
-        weights_control = 1.0 / np.clip(km.predict(t_test[control_mask]), epsilon, 1.0)
+        # Every control is uncensored at t, so all share the weight 1 / G(t)
+        weights_control = np.full(
+            control_mask.sum(), 1.0 / np.clip(km.predict(t), epsilon, 1.0)
+        )
 
     # Compute pairwise AUC: compare each (event, control) pair
     auc_numerator = 0.0
@@ -168,7 +171,7 @@ def truncated_concordance_td(
     # IPCW
     if km is not None:
         km = estimate_ipcw(km)
-        weights_event = np.clip(km.predict(t_test), epsilon, None)
+        weights_event = np.clip(np.asarray(km.predict(t_test)), epsilon, None)
     else:
         weights_event = np.ones_like(t_test)
 
@@ -189,8 +192,11 @@ def truncated_concordance_td(
         after_mask = t_test > t_i
         before_mask = (t_test <= t_i) & (e_test != primary_risk) & (e_test != 0)
 
-        weights_after = weights_event[after_mask] / (w_i**2)
-        weights_before = weights_event[before_mask] / (w_i * weights_event[before_mask])
+        # IPCW pair weights (Wolbers et al., 2014): 1 / G(t_i)^2 when j is
+        # still event-free after t_i, 1 / (G(t_i) G(t_j)) when j had a
+        # competing event before t_i.
+        weights_after = np.full(after_mask.sum(), 1.0 / w_i**2)
+        weights_before = 1.0 / (w_i * weights_event[before_mask])
 
         risks_after = risk_predicted_test[after_mask, index]
         risks_before = risk_predicted_test[before_mask, index]

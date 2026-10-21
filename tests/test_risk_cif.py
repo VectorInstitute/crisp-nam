@@ -18,6 +18,7 @@ from crisp_nam.utils.risk_cif import (
     compute_all_baseline_cifs,
     compute_baseline_cif,
     compute_baseline_cumulative_hazard,
+    censoring_survival_before,
     compute_breslow_baseline,
     fit_breslow_baseline,
     predict_absolute_risk,
@@ -255,3 +256,57 @@ def test_predict_all_cumulative_hazards_shape_and_consistency():
     for k in range(num_competing_risks):
         individual = predict_cumulative_hazard(model, x_tensor, baseline_cumhazards[k], k)
         assert np.allclose(all_hazards[:, k, :], individual)
+
+
+class _IdentityModel(nn.Module):
+    """Uses the two input columns directly as the two causes' risk scores."""
+
+    def forward(self, x):
+        return [x[:, :1], x[:, 1:2]], None
+
+
+def test_cause_specific_cifs_stay_bounded_for_high_risk_subjects():
+    # Regression test: summing S(s-) dH_k overshoots 1 when one hazard jump is
+    # large, which happens for high-risk subjects late in follow-up.
+    rng = np.random.default_rng(0)
+    n = 300
+    scores = rng.normal(0, 1.5, size=(n, 2))
+    event_times = rng.exponential(1 / np.exp(scores).sum(axis=1))
+    censor_times = rng.exponential(2.0, size=n)
+    times = np.minimum(event_times, censor_times)
+    cause = 1 + (rng.random(n) < np.exp(scores[:, 1]) / np.exp(scores).sum(axis=1))
+    events = np.where(event_times <= censor_times, cause, 0)
+    baseline = fit_breslow_baseline(scores, times, events)
+
+    x = np.array([[2.0, 2.0], [4.0, 4.0], [8.0, 8.0]], dtype=np.float32)
+    abs_risk = predict_absolute_risk(_IdentityModel(), x, baseline, [times.max()])
+
+    assert np.all(abs_risk >= 0.0)
+    assert np.all(abs_risk.sum(axis=1) <= 1.0 + 1e-12)
+
+
+def test_censoring_survival_before_matches_hand_computed_km():
+    times = np.array([1.0, 2.0, 3.0, 5.0])
+    events = np.array([2, 0, 0, 1])
+    got = censoring_survival_before(times, events, np.array([1.0, 2.0, 3.0, 5.0, 6.0]))
+    assert np.allclose(got, [1.0, 1.0, 2 / 3, 1 / 3, 1 / 3])
+
+
+def test_fine_gray_with_constant_scores_and_censoring_matches_aalen_johansen():
+    # Without IPCW weights, retained competing-event subjects inflate the risk
+    # set under censoring and the Fine-Gray CIF is biased low.
+    rng = np.random.default_rng(4)
+    n = 5000
+    t1, t2, cens = (rng.exponential(1.0, size=n) for _ in range(3))
+    event_times = np.minimum(t1, t2)
+    times = np.minimum(event_times, cens)
+    events = np.where(event_times <= cens, np.where(t1 < t2, 1, 2), 0)
+    eval_times = np.array([0.5, 1.0, 2.0])
+    baseline = fit_breslow_baseline(
+        np.zeros((n, 2)), times, events, risk_model="fine_gray"
+    )
+
+    cumhaz = baseline.cumulative_hazard(eval_times)
+    for k in range(2):
+        expected = compute_baseline_cif(times, events, eval_times, event_type=k + 1)
+        assert np.allclose(1.0 - np.exp(-cumhaz[k]), expected, atol=0.01)
