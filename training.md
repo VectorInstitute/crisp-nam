@@ -28,19 +28,14 @@ crisp_nam/
 │   ├── __init__.py
 │   ├── load_datasets.py
 │   └── survival_datasets.py
-├── datasets/                               # Dataset files and loaders
+├── datasets/                               # Dataset files
 │   ├── metabric/
 │   │   ├── cleaned_features_final.csv
 │   │   └── label.csv
-│   ├── framingham_dataset.py
 │   ├── framingham.csv
-│   ├── pbc_dataset.py
 │   ├── pbc2.csv
-│   ├── support_dataset.py
 │   ├── support2.csv
-│   ├── SurvivalDataset.py
-│   ├── synthetic_comprisk.csv
-│   └── synthetic_dataset.py
+│   └── synthetic_comprisk.csv
 ├── docs/                                   # Documentation of Pypi package.
 ├── results/                                # Results and outputs
 │   ├── best_params/                        # Best parameters for dataset and model combinations
@@ -152,7 +147,9 @@ All parameters can be passed via command line or specified in a YAML config file
 - `--custom_event_weights` (str): Custom weights for events (comma-separated, default: `None`)
 
 5. Other Parameters
-- `--seed` (int): Random seed for reproducibility (default: `42`)
+- `--risk_model` (str): `train.py` only. Train with cause-specific hazards or Fine-Gray subdistribution hazards (choices: `cause_specific`, `fine_gray`, default: `cause_specific`)
+- `--device` (str): Device to train on; `auto` uses CUDA if available, otherwise CPU (choices: `auto`, `cpu`, `cuda`, `mps`, default: `auto`)
+- `--seed` (int): Random seed for reproducibility, including the hyperparameter search (default: `42`)
 - `--config` (str): Path to YAML config file (default: looks for `config.yaml`)
 
 ### Examples
@@ -205,9 +202,11 @@ The script computes the following metrics at different time quantiles (25%, 50%,
 
 1. **AUC (Area Under the ROC Curve)**: Time-dependent AUC for discrimination
   - 0.5 = random, >0.7 = good, >0.8 = excellent
-2. **TDCI (Time-Dependent Concordance Index)**: Harrell's C-index adapted for competing risks
+2. **TDCI (Time-Dependent Concordance Index)**: IPCW C-index that ranks each risk's predicted incidence against time to *any* event
   - 0.5 = random, >0.7 = good, >0.8 = excellent
-3. **Brier Score**: Calibration metric measuring prediction accuracy
+3. **CRCI (Competing-Risks Concordance Index)**: Cause-specific C-index (Wolbers et al., 2014); cases are events of the given cause, compared against subjects still event-free or who had a competing event first
+  - 0.5 = random, >0.7 = good, >0.8 = excellent
+4. **Brier Score**: Calibration metric measuring prediction accuracy
   - 0 = perfect, <0.25 = good, >0.25 = poor
 
 > [!NOTE]
