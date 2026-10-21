@@ -73,7 +73,12 @@ This project is licensed under the MIT License.
 
 ## What's New
 
-These changes are not yet in the PyPI release; install from source to use them. Some of the fixes change numbers reported in the paper, most notably the Brier scores and the PBC and SUPPORT results.
+> [!IMPORTANT]
+> The bugs listed below were discovered after the paper was published. We are listing them here to be transparent about how they affect the results. Some of the fixes change numbers reported in the paper, most notably the Brier scores and the PBC and SUPPORT results.
+>
+> We strongly recommend using the most recent version of this code. The version tied to the publication is tagged [`v0.1.2`](https://github.com/VectorInstitute/crisp-nam/tree/v0.1.2), and is kept only for reproducing the published results.
+
+These changes are not yet in the PyPI release; install from source to use them.
 
 ### 2026-10-21
 
