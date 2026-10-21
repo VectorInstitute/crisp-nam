@@ -27,6 +27,13 @@ This package provides a comprehensive framework for competing risks survival ana
 - Fixed continuous-feature imputation being fit on the full dataset before cross-validation splitting, which leaked validation-fold statistics into training (now fit per-fold, mirroring the existing per-fold feature scaling).
 - Fixed `tune_optuna_optimized.py` scaling continuous features on the full dataset before its train/validation split (same leakage issue, now fit per-split).
 - Removed unused duplicate dataset-loading files under `datasets/` that were dead code and contained the same bugs listed above.
+- Fixed absolute-risk (CIF) prediction depending on an arbitrary offset in the model's risk scores. The Cox partial likelihood cannot identify a constant added to a cause's scores, but `predict_absolute_risk` combined the raw scores with a population-level baseline CIF, so predicted probabilities, and therefore Brier scores, varied wildly between folds (e.g. 0.05 in one fold, 0.8 in another). Predictions now use a Breslow baseline fitted to the model's own training scores (`compute_breslow_baseline`) combined via Aalen-Johansen (cause-specific) or `1 - exp(-H)` (Fine-Gray). AUC and C-index are unaffected; Brier scores reported with earlier versions are not reliable. `compute_baseline_cumulative_hazard` now takes this baseline as well.
+- Fixed `train_nested_cv.py` crashing when saving aggregated hyperparameters if outer folds selected different numbers of hidden layers, and writing numpy object tags instead of plain numbers to the YAML.
+- Fixed `tune_optuna_optimized.py` final evaluation indexing risks by evaluation time, which raised an `IndexError`.
+- Fixed hyperparameter search not being reproducible: the Optuna sampler was unseeded, so `--seed` did not make nested-CV results repeatable (e.g. PBC AUC could differ by more than 0.2 between runs with the same seed). The `TPESampler` is now seeded from `--seed`.
+
+### Other Changes
+- Added a `--device {auto,cpu,cuda,mps}` option to the training and tuning scripts (`auto` keeps the previous CUDA-else-CPU behaviour). Apple-GPU (`mps`) training works, but for these small per-feature networks it is typically slower than CPU.
 
 ### New Features
 - Added a `--risk_model` option to select between cause-specific hazards and Fine-Gray subdistribution hazards during training.

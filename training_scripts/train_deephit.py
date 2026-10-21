@@ -14,6 +14,9 @@ from sksurv.metrics import concordance_index_ipcw
 
 from data_utils import *
 from model_utils import (
+    DEVICE_CHOICES,
+    DEVICE_HELP,
+    get_device,
     set_seed,
     EarlyStopping,
     create_fc_mask1,
@@ -75,6 +78,8 @@ def parse_args():
     # General parameters
     parser.add_argument("--dropout_rate", type=float, default=0.3, 
                       help="Dropout rate for model")
+    parser.add_argument("--device", type=str, default="auto", choices=DEVICE_CHOICES,
+                      help=DEVICE_HELP)
     parser.add_argument("--seed", type=int, default=42, 
                       help="Random seed for reproducibility")
     parser.add_argument("--n_folds", type=int, default=5, 
@@ -423,7 +428,7 @@ def main():
     
     # Get number of competing risks
     num_competing_risks = len(np.unique(e)) - 1  # Excluding censoring (0)
-    device = ("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device(args.device)
     
     # Prepare dataset with discretized times
     # Maximum time in the dataset
