@@ -66,3 +66,14 @@ def test_truncated_concordance_td_counts_competing_events_as_controls():
     risks = np.array([[0.9], [0.1]])
     c_index, _ = truncated_concordance_td(e_test, t_test, risks, np.array([3.0]), 3.0)
     assert c_index == 1.0
+
+
+def test_auc_td_handles_a_single_case():
+    # lifelines returns a scalar rather than an array for one time point
+    e_test = np.array([2, 0, 0, 1, 0])
+    t_test = np.array([1.0, 2.0, 5.0, 6.0, 7.0])
+    risks = np.array([[0.9], [0.1], [0.2], [0.3], [0.4]])
+    auc, _ = auc_td(
+        e_test, t_test, risks, np.array([3.0]), 3.0, km=(e_test, t_test), primary_risk=2
+    )
+    assert auc == 1.0

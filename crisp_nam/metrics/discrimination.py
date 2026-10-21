@@ -67,7 +67,10 @@ def auc_td(
         weights_control = np.ones_like(control_scores)
     else:
         km = estimate_ipcw(km)
-        weights_event = 1.0 / np.clip(km.predict(t_test[event_mask]), epsilon, 1.0)
+        # atleast_1d: lifelines returns a scalar when there is a single case
+        weights_event = 1.0 / np.clip(
+            np.atleast_1d(np.asarray(km.predict(t_test[event_mask]))), epsilon, 1.0
+        )
         # Every control is uncensored at t, so all share the weight 1 / G(t)
         weights_control = np.full(
             control_mask.sum(), 1.0 / np.clip(km.predict(t), epsilon, 1.0)
