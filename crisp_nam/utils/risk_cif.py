@@ -54,6 +54,31 @@ class BreslowBaseline:
         return cumhaz[:, np.searchsorted(self.event_times, np.asarray(times), side="right")]
 
 
+def censoring_survival_before(
+    times: np.ndarray, events: np.ndarray, at: np.ndarray
+) -> np.ndarray:
+    """
+    Kaplan-Meier estimate of the censoring survival function just before `at`, G(at-).
+
+    Censoring is the "event" (`events == 0`); subjects with an event at a
+    censoring time count as still at risk of censoring at that time.
+
+    Args:
+        times: Event/censoring times, shape (n_samples,).
+        events: Event indicators (0=censored, 1...K=event types).
+        at: Times at which to evaluate G(t-).
+
+    Returns
+    -------
+        Array of G(t-) values, same shape as `at`.
+    """
+    times = np.asarray(times, dtype=float)
+    cens_times, n_cens = np.unique(times[np.asarray(events) == 0], return_counts=True)
+    n_at_risk = len(times) - np.searchsorted(np.sort(times), cens_times, side="left")
+    surv = np.concatenate([[1.0], np.cumprod(1.0 - n_cens / n_at_risk)])
+    return surv[np.searchsorted(cens_times, np.asarray(at, dtype=float), side="left")]
+
+
 def fit_breslow_baseline(
     risk_scores: np.ndarray,
     times: np.ndarray,
@@ -64,10 +89,11 @@ def fit_breslow_baseline(
     Fit Breslow baseline hazards from training-set risk scores.
 
     The baseline hazard jump for cause k at event time s is
-    `d_k(s) / sum_{j in R_k(s)} exp(f_k(x_j))`, using the same risk set
-    `R_k(s)` as the training loss: subjects with `t_j >= s` for the
-    cause-specific model, plus subjects who had a competing event before `s`
-    for the Fine-Gray model.
+    `d_k(s) / sum_{j in R_k(s)} w_j(s) exp(f_k(x_j))`, using the same risk
+    set `R_k(s)` as the training loss: subjects with `t_j >= s` (weight 1)
+    for the cause-specific model, plus, for the Fine-Gray model, subjects who
+    had a competing event before `s`, with inverse-probability-of-censoring
+    weight `w_j(s) = G(s-) / G(t_j-)` (Fine & Gray, 1999).
 
     Args:
         risk_scores: Training-set risk scores f_k(x), shape (n_samples, K).
@@ -90,6 +116,11 @@ def fit_breslow_baseline(
     event_times = np.unique(times[events > 0])
     order = np.argsort(times)
     first_at_risk = np.searchsorted(times[order], event_times, side="left")
+    if risk_model == "fine_gray":
+        cens_surv_at_events = censoring_survival_before(times, events, event_times)
+        cens_surv_at_subjects = np.clip(
+            censoring_survival_before(times, events, times), 1e-12, None
+        )
 
     increments = np.zeros((num_risks, len(event_times)))
     for k in range(num_risks):
@@ -102,12 +133,14 @@ def fit_breslow_baseline(
         risk_set_sums = tail_sums[first_at_risk]
 
         if risk_model == "fine_gray":
-            # Subjects with a competing event strictly before s stay in the risk set.
+            # Subjects with a competing event strictly before s stay in the risk
+            # set, weighted by G(s-) / G(t_j-).
             competing = (events != 0) & (events != k + 1)
             comp_order = np.argsort(times[competing])
-            comp_cumsum = np.concatenate([[0.0], np.cumsum(weights[competing][comp_order])])
+            comp_weights = weights[competing] / cens_surv_at_subjects[competing]
+            comp_cumsum = np.concatenate([[0.0], np.cumsum(comp_weights[comp_order])])
             n_before = np.searchsorted(times[competing][comp_order], event_times, side="left")
-            risk_set_sums = risk_set_sums + comp_cumsum[n_before]
+            risk_set_sums = risk_set_sums + cens_surv_at_events * comp_cumsum[n_before]
 
         n_events = np.bincount(
             np.searchsorted(event_times, times[events == k + 1]),
@@ -282,8 +315,11 @@ def predict_absolute_risk(
     Predict absolute risk (CIF) for each competing event by given time points.
 
     Cause-specific model: Aalen-Johansen combination of the per-cause
-    hazards, `CIF_k(t|x) = sum_{s<=t} S(s-|x) dH_k(s|x)` with
-    `dH_k(s|x) = dH0_k(s) exp(f_k(x))` and `S = exp(-sum_k H_k)`.
+    hazards, `CIF_k(t|x) = sum_{s<=t} S(s-|x) (1 - exp(-dH(s|x))) dH_k(s|x) / dH(s|x)`
+    with `dH_k(s|x) = dH0_k(s) exp(f_k(x))`, `dH = sum_k dH_k` and
+    `S = exp(-sum_k H_k)`. Each step moves exactly the probability mass that
+    `S` loses, so the CIFs sum to `1 - S(t|x) <= 1` even when a single
+    hazard jump is large.
     Fine-Gray model: `CIF_k(t|x) = 1 - exp(-H0_k(t) exp(f_k(x)))` with
     `H0_k` the subdistribution baseline cumulative hazard.
 
@@ -315,7 +351,14 @@ def predict_absolute_risk(
         d_hazard = baseline.hazard_increments[None] * hr[:, :, None]  # (N, K, G)
         d_total = d_hazard.sum(axis=1)  # (N, G)
         surv_before = np.exp(-(np.cumsum(d_total, axis=1) - d_total))  # S(s-|x)
-        cif = np.cumsum(surv_before[:, None, :] * d_hazard, axis=2)
+        step_prob = -np.expm1(-d_total)  # P(any event at s | at risk), (N, G)
+        cause_share = np.divide(
+            d_hazard,
+            d_total[:, None, :],
+            out=np.zeros_like(d_hazard),
+            where=d_total[:, None, :] > 0,
+        )
+        cif = np.cumsum((surv_before * step_prob)[:, None, :] * cause_share, axis=2)
         cif = np.concatenate([np.zeros(cif.shape[:2] + (1,)), cif], axis=2)
         abs_risks[start : start + chunk_size] = cif[:, :, time_idx]
 

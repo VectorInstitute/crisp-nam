@@ -15,7 +15,7 @@ from tabulate import tabulate
 from torch import optim
 from torch.utils.data import DataLoader
 
-from crisp_nam.metrics import auc_td, brier_score
+from crisp_nam.metrics import auc_td, brier_score, truncated_concordance_td
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
     compute_baseline_cumulative_hazard,
@@ -276,6 +276,22 @@ def evaluate_model(model, x_val, t_val, e_val, t_train, e_train, abs_risks, time
                 print(f"[Warning] td-CI failed at t={time:.2f}, event={k + 1}: {ex}")
                 metrics[f"tdci_event{k + 1}_t{time:.2f}"].append(np.nan)
 
+            # Competing-risks C-index for this cause (Wolbers et al., 2014)
+            try:
+                crci_score, _ = truncated_concordance_td(
+                    e_val,
+                    t_val,
+                    risk_preds_2d,
+                    times,
+                    time,
+                    km=(e_train, t_train),
+                    primary_risk=k + 1,
+                )
+                metrics[f"crci_event{k + 1}_t{time:.2f}"].append(float(crci_score))
+            except Exception as ex:
+                print(f"[Warning] CR C-index failed at t={time:.2f}, event={k + 1}: {ex}")
+                metrics[f"crci_event{k + 1}_t{time:.2f}"].append(np.nan)
+
     return metrics
 
 
@@ -285,7 +301,7 @@ def display_metrics_table(metrics_dict, n_folds=5, quantiles=[0.25, 0.5, 0.75]):
     """
     time_points_by_metric = {}
     event_types = set()
-    metric_types = ["auc", "tdci", "brier"]
+    metric_types = ["auc", "tdci", "brier", "crci"]
 
     for key, values in metrics_dict.items():
         if any(metric in key for metric in metric_types):
@@ -352,7 +368,7 @@ def display_metrics_table(metrics_dict, n_folds=5, quantiles=[0.25, 0.5, 0.75]):
 
     # Define column order
     columns = ["Risk"]
-    for metric in ["AUC", "TDCI", "BRIER"]:
+    for metric in ["AUC", "TDCI", "CRCI", "BRIER"]:
         for q in quantiles:
             columns.append(f"{metric}_q{q:.2f}")
 
@@ -364,7 +380,8 @@ def display_metrics_table(metrics_dict, n_folds=5, quantiles=[0.25, 0.5, 0.75]):
 
     print("\nInterpretation:")
     print("- AUC: 0.5=random, >0.7=good, >0.8=excellent")
-    print("- TDCI (Time-Dependent C-Index): 0.5=random, >0.7=good, >0.8=excellent")
+    print("- TDCI (Time-Dependent C-Index, any event as outcome): 0.5=random, >0.7=good, >0.8=excellent")
+    print("- CRCI (Competing-risks C-index for this cause): 0.5=random, >0.7=good, >0.8=excellent")
     print("- Brier Score: 0=perfect, <0.25=good, >0.25=poor")
 
 
@@ -661,10 +678,17 @@ def main():
     if not os.path.exists("figs"):
         os.makedirs("figs")
 
+    # Plots use the last fold's model, so preprocess the full data with that fold's imputer and scaler
+    x_plot = x.copy()
+    if cont_impute_strategy is not None:
+        x_plot[:, -n_cont:] = cont_imputer.transform(x_plot[:, -n_cont:])
+    if args.scaling.lower() != "none":
+        x_plot[:, -n_cont:] = scaler.transform(x_plot[:, -n_cont:])
+
     for risk in range(1, num_competing_risks + 1):
         fig, _, top_positive, top_negative = plot_feature_importance(
             model=model,
-            x_data=x,
+            x_data=x_plot,
             feature_names=feature_names,
             n_top=5,  # Show top 5 positive contributors
             n_bottom=5,  # Show top 5 negative contributors
@@ -677,7 +701,7 @@ def main():
 
         fig, axes = plot_coxnam_shape_functions(
             model=model,
-            X=x,
+            X=x_plot,
             risk_to_plot=risk,
             feature_names=feature_names,
             top_features=top_features,
@@ -692,7 +716,7 @@ def main():
         )
         fig_ch, _ = plot_cumulative_hazard(
             model=model,
-            x_data=x,
+            x_data=x_plot,
             baseline_cumhazard=baseline_cumhazard,
             eval_times=eval_times,
             risk_idx=risk,

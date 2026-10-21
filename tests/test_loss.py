@@ -183,3 +183,36 @@ def test_fine_gray_all_censored_is_zero():
 
     assert fg_loss.item() == 0.0
     assert weighted_fg_loss.item() == 0.0
+
+
+def _censored_fine_gray_scenario():
+    """Competing event at t=1, censorings at t=2 and t=3, cause-1 event at t=5.
+
+    Censoring Kaplan-Meier: G(5-) = (1 - 1/3) * (1 - 1/2) = 1/3 and G(1-) = 1,
+    so the competing-event subject stays in cause 1's risk set at t=5 with
+    IPCW weight G(5-) / G(1-) = 1/3.
+    """
+    times = torch.tensor([1.0, 2.0, 3.0, 5.0])
+    events = torch.tensor([2, 0, 0, 1])
+    risk_scores = [
+        torch.tensor([[0.5], [-0.2], [0.1], [1.2]]),
+        torch.tensor([[0.3], [0.4], [-0.6], [-0.7]]),
+    ]
+    return risk_scores, times, events
+
+
+def test_fine_gray_applies_censoring_weights_to_retained_subjects():
+    risk_scores, times, events = _censored_fine_gray_scenario()
+    f1 = risk_scores[0].squeeze()
+    f2 = risk_scores[1].squeeze()
+
+    term_k1 = torch.log(torch.exp(f1[3]) + torch.exp(f1[0]) / 3) - f1[3]
+    term_k2 = torch.logsumexp(f2, dim=0) - f2[0]  # everyone is at risk at t=1
+    expected = (term_k1 + term_k2) / 2
+
+    fg_loss = fine_gray_negative_log_likelihood(risk_scores, times, events, num_competing_risks=2)
+    weighted = weighted_fine_gray_negative_log_likelihood(
+        risk_scores, times, events, num_competing_risks=2
+    )
+    assert torch.allclose(fg_loss, expected, atol=1e-6)
+    assert torch.allclose(weighted, expected, atol=1e-6)

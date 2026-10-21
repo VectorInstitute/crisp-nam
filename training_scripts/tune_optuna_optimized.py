@@ -15,6 +15,7 @@ from tabulate import tabulate
 from torch import nn, optim
 from torch.utils.data import DataLoader, TensorDataset
 
+from crisp_nam.metrics import truncated_concordance_td
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
     BreslowBaseline,
@@ -200,6 +201,13 @@ def evaluate_model(
                 metrics[f"tdci_event{k_idx}_t{ti:.2f}"].append(float(td))
             except:
                 metrics[f"tdci_event{k_idx}_t{ti:.2f}"].append(np.nan)
+            try:
+                crci, _ = truncated_concordance_td(
+                    e_val, t_val, preds, eval_times, ti, km=(e_train, t_train), primary_risk=k_idx
+                )
+                metrics[f"crci_event{k_idx}_t{ti:.2f}"].append(float(crci))
+            except Exception:
+                metrics[f"crci_event{k_idx}_t{ti:.2f}"].append(np.nan)
     return metrics
 
 
@@ -382,7 +390,7 @@ def main():
     rows = []
     for k in range(1, num_competing_risks + 1):
         row = {"Risk": f"Type {k}"}
-        for metric in ["auc", "tdci", "brier"]:
+        for metric in ["auc", "tdci", "crci", "brier"]:
             for q, ti in zip([0.25, 0.5, 0.75], eval_times):
                 key = f"{metric}_event{k}_t{ti:.2f}"
                 vals = np.array(metrics[key], dtype=float)
