@@ -4,6 +4,24 @@ import numpy as np
 import torch
 
 
+DEVICE_CHOICES = ["auto", "cpu", "cuda", "mps"]
+DEVICE_HELP = (
+    "Device to train on. 'auto' uses CUDA if available, else CPU. 'mps' (Apple GPU) "
+    "is supported but usually slower than CPU for these small per-feature networks."
+)
+
+
+def get_device(name="auto"):
+    """Resolve a --device choice to a torch.device, failing loudly if unavailable."""
+    if name == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if name == "cuda" and not torch.cuda.is_available():
+        raise ValueError("--device cuda requested but CUDA is not available")
+    if name == "mps" and not torch.backends.mps.is_available():
+        raise ValueError("--device mps requested but MPS is not available")
+    return torch.device(name)
+
+
 def set_seed(seed=42):
     random.seed(seed)
     np.random.seed(seed)
