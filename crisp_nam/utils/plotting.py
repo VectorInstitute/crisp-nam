@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import torch
 
+from .risk_cif import predict_cumulative_hazard
+
 
 def plot_feature_importance(
     model: torch.nn.Module,
@@ -215,3 +217,76 @@ def plot_coxnam_shape_functions(
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
 
     return fig, axes[:n_selected]
+
+
+def plot_cumulative_hazard(
+    model: torch.nn.Module,
+    x_data: Union[np.ndarray, torch.Tensor],
+    baseline_cumhazard: np.ndarray,
+    eval_times: Union[List[float], np.ndarray],
+    risk_idx: int = 1,
+    sample_indices: List[int] | None = None,
+    n_samples: int = 5,
+    figsize: tuple = (8, 6),
+    output_file: str = "",
+) -> tuple:
+    """Plot predicted cause-specific cumulative hazard curves H_k(t|x) for a
+    handful of individual samples, given a precomputed baseline cumulative
+    hazard (e.g. from `crisp_nam.utils.risk_cif.compute_baseline_cumulative_hazard`).
+
+    Parameters
+    ----------
+    - model: A trained CoxNAM-style model (torch.nn.Module) with per-risk output heads
+    - x_data: Input data (numpy array or torch tensor) to compute cumulative hazard for
+    - baseline_cumhazard: Array of shape (len(eval_times),) — cause-specific baseline
+      cumulative hazard for `risk_idx`, e.g. from `compute_baseline_cumulative_hazard`
+    - eval_times: Time points at which the baseline (and predictions) are evaluated
+    - risk_idx: Index (1-based) of the competing risk to plot
+    - sample_indices: Optional explicit list of row indices into x_data to plot.
+      If None, the first `n_samples` rows are used.
+    - n_samples: Number of samples to plot when `sample_indices` is not given
+    - figsize: Size of the plot (width, height)
+    - output_file: Optional path to save the plot image
+
+    Returns
+    -------
+    - fig: Matplotlib figure object
+    - ax: Matplotlib axes object
+    """
+    # determine model device
+    device = next(model.parameters()).device
+    model.eval()
+
+    # convert x_data to tensor on the model device
+    if not isinstance(x_data, torch.Tensor):
+        x = torch.tensor(x_data, dtype=torch.float32, device=device)
+    else:
+        x = x_data.to(device)
+
+    # select rows to plot
+    if sample_indices is None:
+        sample_indices = list(range(min(n_samples, x.shape[0])))
+    x_selected = x[sample_indices]
+
+    risk_idx0 = risk_idx - 1
+
+    with torch.no_grad():
+        curves = predict_cumulative_hazard(
+            model, x_selected, baseline_cumhazard, risk_idx0
+        )
+
+    fig, ax = plt.subplots(figsize=figsize)
+    for i, curve in zip(sample_indices, curves):
+        ax.step(eval_times, curve, where="post", label=f"Sample {i}")
+
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Cumulative Hazard")
+    ax.set_title(f"Predicted Cumulative Hazard — Risk {risk_idx}")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    plt.tight_layout()
+
+    if output_file:
+        plt.savefig(output_file, bbox_inches="tight", dpi=300)
+
+    return fig, ax

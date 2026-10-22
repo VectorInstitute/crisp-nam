@@ -18,11 +18,15 @@ from crisp_nam.metrics import auc_td, brier_score
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
     compute_baseline_cif,
+    compute_baseline_cumulative_hazard,
     compute_l2_penalty,
+    fine_gray_negative_log_likelihood,
     negative_log_likelihood_loss,
     plot_coxnam_shape_functions,
+    plot_cumulative_hazard,
     plot_feature_importance,
     predict_absolute_risk,
+    weighted_fine_gray_negative_log_likelihood,
     weighted_negative_log_likelihood_loss,
 )
 from data_utils import *
@@ -91,6 +95,16 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--risk_model",
+        type=str,
+        default="cause_specific",
+        choices=["cause_specific", "fine_gray"],
+        help="Risk model formulation: cause-specific hazards (independent per-cause "
+        "risk sets) or Fine-Gray subdistribution hazards (competing-event subjects "
+        "remain in each cause's risk set)",
+    )
+
+    parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
     )
     parser.add_argument(
@@ -98,6 +112,15 @@ def parse_args():
     )
 
     return parser.parse_args()
+
+
+# Maps (risk_model, weighted) -> loss function.
+_LOSS_FUNCTIONS = {
+    ("cause_specific", False): negative_log_likelihood_loss,
+    ("cause_specific", True): weighted_negative_log_likelihood_loss,
+    ("fine_gray", False): fine_gray_negative_log_likelihood,
+    ("fine_gray", True): weighted_fine_gray_negative_log_likelihood,
+}
 
 
 def train_model(
@@ -110,10 +133,19 @@ def train_model(
     patience=10,
     event_weights=None,
     verbose=True,
+    risk_model: str = "cause_specific",
 ):
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     early_stopper = EarlyStopping(patience=patience)
     device = next(model.parameters()).device
+    loss_fn = _LOSS_FUNCTIONS[(risk_model, event_weights is not None)]
+
+    def compute_loss(risk_scores, t, e):
+        if event_weights is not None:
+            return loss_fn(
+                risk_scores, t, e, model.num_competing_risks, event_weights=event_weights
+            )
+        return loss_fn(risk_scores, t, e, model.num_competing_risks)
 
     for epoch in range(num_epochs):
         model.train()
@@ -122,19 +154,7 @@ def train_model(
             x, t, e = x.to(device), t.to(device), e.to(device)
             risk_scores, _ = model(x)
 
-            # Use weighted loss if event_weights is provided
-            if event_weights is not None:
-                loss = weighted_negative_log_likelihood_loss(
-                    risk_scores,
-                    t,
-                    e,
-                    model.num_competing_risks,
-                    event_weights=event_weights,
-                )
-            else:
-                loss = negative_log_likelihood_loss(
-                    risk_scores, t, e, model.num_competing_risks
-                )
+            loss = compute_loss(risk_scores, t, e)
 
             reg = compute_l2_penalty(model) * l2_reg
             total = loss + reg
@@ -155,18 +175,7 @@ def train_model(
                     risk_scores, _ = model(x)
 
                     # Use same loss function as in training
-                    if event_weights is not None:
-                        loss = weighted_negative_log_likelihood_loss(
-                            risk_scores,
-                            t,
-                            e,
-                            model.num_competing_risks,
-                            event_weights=event_weights,
-                        )
-                    else:
-                        loss = negative_log_likelihood_loss(
-                            risk_scores, t, e, model.num_competing_risks
-                        )
+                    loss = compute_loss(risk_scores, t, e)
 
                     reg = compute_l2_penalty(model) * l2_reg
                     val_loss += (loss + reg).item()
@@ -441,6 +450,16 @@ def main():
         )
 
         parser.add_argument(
+            "--risk_model",
+            type=str,
+            default="cause_specific",
+            choices=["cause_specific", "fine_gray"],
+            help="Risk model formulation: cause-specific hazards (independent per-cause "
+            "risk sets) or Fine-Gray subdistribution hazards (competing-event subjects "
+            "remain in each cause's risk set)",
+        )
+
+        parser.add_argument(
             "--seed", type=int, default=42, help="Random seed for reproducibility"
         )
         parser.add_argument(
@@ -602,6 +621,7 @@ def main():
             patience=args.patience,
             event_weights=fold_event_weights,
             verbose=True,
+            risk_model=args.risk_model,
         )
 
         # Calculate baseline CIFs using the same eval times for all folds
@@ -654,6 +674,19 @@ def main():
             output_file=f"figs/shape_functions_top_features_risk{risk}_{args.dataset}.png",
         )
         plt.close(fig)
+
+        baseline_cumhazard = compute_baseline_cumulative_hazard(
+            t_train, e_train, eval_times, risk
+        )
+        fig_ch, _ = plot_cumulative_hazard(
+            model=model,
+            x_data=x,
+            baseline_cumhazard=baseline_cumhazard,
+            eval_times=eval_times,
+            risk_idx=risk,
+            output_file=f"figs/cumulative_hazard_risk{risk}_{args.dataset}.png",
+        )
+        plt.close(fig_ch)
 
 
 if __name__ == "__main__":

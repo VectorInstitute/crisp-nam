@@ -10,6 +10,8 @@ This package provides a comprehensive framework for competing risks survival ana
 
 - **Interpretable Architecture**: Neural additive models that provide feature-level interpretability through shape functions
 - **Competing Risks Support**: Native handling of multiple competing events in survival analysis
+- **Selectable Risk Model**: Choose between cause-specific hazards and Fine-Gray subdistribution hazards for competing risks training
+- **Cumulative Hazard Estimation**: Compute and plot cause-specific cumulative hazard functions alongside cumulative incidence
 - **Comprehensive Evaluation**: Nested cross-validation with robust performance metrics (AUC, Brier Score, Time-dependent C-index)
 - **Hyperparameter Optimization**: Automated tuning using Optuna with customizable search spaces
 - **Rich Visualizations**: Automated generation of feature importance plots and shape function visualizations
