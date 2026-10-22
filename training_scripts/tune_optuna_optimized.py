@@ -5,7 +5,7 @@ import numpy as np
 import optuna
 import torch
 import yaml
-from model_utils import EarlyStopping, set_seed
+from model_utils import DEVICE_CHOICES, DEVICE_HELP, EarlyStopping, get_device, set_seed
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -17,7 +17,8 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
-    compute_baseline_cif,
+    BreslowBaseline,
+    compute_breslow_baseline,
     compute_l2_penalty,
     negative_log_likelihood_loss,
     predict_absolute_risk,
@@ -168,16 +169,16 @@ def evaluate_model(
     e_val: np.ndarray,
     t_train: np.ndarray,
     e_train: np.ndarray,
-    baseline_cifs: dict,
+    baseline: BreslowBaseline,
     eval_times: np.ndarray,
     device: torch.device,
 ):
     surv_train = Surv.from_arrays(e_train != 0, t_train)
     surv_val = Surv.from_arrays(e_val != 0, t_val)
-    abs_risk = predict_absolute_risk(model, X, baseline_cifs, eval_times, device=device)
+    abs_risk = predict_absolute_risk(model, X, baseline, eval_times, device=device)
 
     metrics = defaultdict(list)
-    for k_idx, t0 in enumerate(eval_times, start=1):
+    for k_idx in range(1, abs_risk.shape[1] + 1):
         preds = abs_risk[:, k_idx - 1, :]
         for ti_idx, ti in enumerate(eval_times):
             r = preds[:, ti_idx]
@@ -233,6 +234,7 @@ def parse_args():
     )
     parser.add_argument("--custom_event_weights", type=str, default=None)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--device", default="auto", choices=DEVICE_CHOICES, help=DEVICE_HELP)
     return parser.parse_args()
 
 
@@ -284,7 +286,7 @@ def main():
     train_ds = TensorDataset(X_train, T[idx_train], E[idx_train])
     val_ds = TensorDataset(X_val, T[idx_val], E[idx_val])
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device(args.device)
     num_competing_risks = len(np.unique(e)) - 1
 
     # Event weighting
@@ -302,7 +304,9 @@ def main():
         event_weights = torch.from_numpy(w.astype("float32")).to(device)
 
     # Optuna study
-    study = optuna.create_study(direction="minimize")
+    study = optuna.create_study(
+        direction="minimize", sampler=optuna.samplers.TPESampler(seed=args.seed)
+    )
     study.optimize(
         lambda trial: objective(
             trial,
@@ -359,10 +363,9 @@ def main():
     # Evaluation
     safe_max = 0.99 * np.max(t[idx_train])
     eval_times = np.quantile(t[idx_train][t[idx_train] <= safe_max], [0.25, 0.5, 0.75])
-    baseline_cifs = {
-        k: compute_baseline_cif(t[idx_train], e[idx_train], eval_times, k + 1)
-        for k in range(num_competing_risks)
-    }
+    baseline = compute_breslow_baseline(
+        final_model, x_train, t[idx_train], e[idx_train], device=device
+    )
     metrics = evaluate_model(
         final_model,
         x_val,
@@ -370,7 +373,7 @@ def main():
         e[idx_val],
         t[idx_train],
         e[idx_train],
-        baseline_cifs,
+        baseline,
         eval_times,
         device,
     )

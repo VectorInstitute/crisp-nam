@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-from model_utils import EarlyStopping, set_seed
+from model_utils import DEVICE_CHOICES, DEVICE_HELP, EarlyStopping, get_device, set_seed
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -18,8 +18,8 @@ from torch.utils.data import DataLoader
 from crisp_nam.metrics import auc_td, brier_score
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
-    compute_baseline_cif,
     compute_baseline_cumulative_hazard,
+    compute_breslow_baseline,
     compute_l2_penalty,
     fine_gray_negative_log_likelihood,
     negative_log_likelihood_loss,
@@ -107,6 +107,9 @@ def parse_args():
 
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--device", type=str, default="auto", choices=DEVICE_CHOICES, help=DEVICE_HELP
     )
     parser.add_argument(
         "--n_folds", type=int, default=5, help="Number of folds for cross-validation"
@@ -464,6 +467,9 @@ def main():
             "--seed", type=int, default=42, help="Random seed for reproducibility"
         )
         parser.add_argument(
+            "--device", type=str, default="auto", choices=DEVICE_CHOICES, help=DEVICE_HELP
+        )
+        parser.add_argument(
             "--n_folds",
             type=int,
             default=5,
@@ -494,7 +500,7 @@ def main():
 
     # Compute weights based on event distribution
     num_competing_risks = len(np.unique(e)) - 1  # Excluding censoring (0)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device(args.device)
 
     event_weights = None
 
@@ -631,14 +637,13 @@ def main():
             risk_model=args.risk_model,
         )
 
-        # Calculate baseline CIFs using the same eval times for all folds
-        baseline_cifs = {
-            k: compute_baseline_cif(t_train, e_train, eval_times, k + 1)
-            for k in range(num_competing_risks)
-        }
+        # Breslow baseline from this fold's training scores
+        baseline = compute_breslow_baseline(
+            model, x_train, t_train, e_train, risk_model=args.risk_model, device=device
+        )
 
         abs_risks = predict_absolute_risk(
-            model, x_val, baseline_cifs, eval_times, device=device
+            model, x_val, baseline, eval_times, device=device
         )
 
         fold_metrics = evaluate_model(
@@ -683,7 +688,7 @@ def main():
         plt.close(fig)
 
         baseline_cumhazard = compute_baseline_cumulative_hazard(
-            t_train, e_train, eval_times, risk
+            baseline, eval_times, risk
         )
         fig_ch, _ = plot_cumulative_hazard(
             model=model,

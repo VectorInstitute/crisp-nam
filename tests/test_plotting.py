@@ -20,7 +20,10 @@ from crisp_nam.utils.plotting import (
     plot_cumulative_hazard,
     plot_feature_importance,
 )
-from crisp_nam.utils.risk_cif import compute_baseline_cumulative_hazard
+from crisp_nam.utils.risk_cif import (
+    compute_baseline_cumulative_hazard,
+    compute_breslow_baseline,
+)
 
 
 def _tiny_model(num_features=4, num_competing_risks=2, seed=0):
@@ -50,9 +53,10 @@ def test_plot_cumulative_hazard_runs_without_error():
 
     times, events = _synthetic_competing_risk_data()
     eval_times = np.linspace(0.1, times.max() * 0.9, 10)
-    baseline_cumhazard = compute_baseline_cumulative_hazard(
-        times, events, eval_times, event_type=1
+    baseline = compute_breslow_baseline(
+        model, np.random.default_rng(0).normal(size=(len(times), model.num_features)), times, events
     )
+    baseline_cumhazard = compute_baseline_cumulative_hazard(baseline, eval_times, event_type=1)
 
     fig, ax = plot_cumulative_hazard(model, x_data, baseline_cumhazard, eval_times, risk_idx=1)
 
@@ -68,9 +72,10 @@ def test_plot_cumulative_hazard_writes_output_file(tmp_path):
 
     times, events = _synthetic_competing_risk_data()
     eval_times = np.linspace(0.1, times.max() * 0.9, 10)
-    baseline_cumhazard = compute_baseline_cumulative_hazard(
-        times, events, eval_times, event_type=1
+    baseline = compute_breslow_baseline(
+        model, np.random.default_rng(0).normal(size=(len(times), model.num_features)), times, events
     )
+    baseline_cumhazard = compute_baseline_cumulative_hazard(baseline, eval_times, event_type=1)
 
     output_file = tmp_path / "cumhazard.png"
     fig, ax = plot_cumulative_hazard(

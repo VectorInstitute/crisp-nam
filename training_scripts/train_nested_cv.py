@@ -7,7 +7,7 @@ import optuna
 import pandas as pd
 import torch
 import yaml
-from model_utils import EarlyStopping, set_seed
+from model_utils import DEVICE_CHOICES, DEVICE_HELP, EarlyStopping, get_device, set_seed
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from crisp_nam.metrics import auc_td, brier_score
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
-    compute_baseline_cif,
+    compute_breslow_baseline,
     compute_l2_penalty,
     negative_log_likelihood_loss,
     plot_coxnam_shape_functions,
@@ -105,6 +105,9 @@ def parse_args():
 
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--device", type=str, default="auto", choices=DEVICE_CHOICES, help=DEVICE_HELP
     )
 
     return parser.parse_args()
@@ -213,6 +216,7 @@ def hyperparameter_optimization(
     args,
     event_weights,
     n_cont,
+    seed,
 ):
     """Run Optuna hyperparameter optimization on inner training data"""
 
@@ -267,8 +271,10 @@ def hyperparameter_optimization(
 
         return best_val_loss
 
-    # Create study and optimize
-    study = optuna.create_study(direction="minimize")
+    # Create study and optimize; seed the sampler so the search is reproducible
+    study = optuna.create_study(
+        direction="minimize", sampler=optuna.samplers.TPESampler(seed=seed)
+    )
     study.optimize(objective, n_trials=args.n_trials, show_progress_bar=False)
 
     return study.best_params
@@ -455,7 +461,7 @@ def main():
         raise ValueError(f"Dataset {args.dataset} not supported")
 
     num_competing_risks = len(np.unique(e)) - 1
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device(args.device)
 
     # Outer cross-validation loop
     outer_cv = StratifiedKFold(
@@ -552,6 +558,7 @@ def main():
                 args,
                 event_weights,
                 n_cont,
+                seed=args.seed + 1000 * outer_fold + inner_fold,
             )
 
             inner_params.append(best_params)
@@ -611,13 +618,12 @@ def main():
         )
 
         # Evaluate on test data
-        baseline_cifs = {
-            k: compute_baseline_cif(t_train_outer, e_train_outer, eval_times, k + 1)
-            for k in range(num_competing_risks)
-        }
+        baseline = compute_breslow_baseline(
+            final_model, x_train_outer, t_train_outer, e_train_outer, device=device
+        )
 
         abs_risks = predict_absolute_risk(
-            final_model, x_test_outer, baseline_cifs, eval_times, device=device
+            final_model, x_test_outer, baseline, eval_times, device=device
         )
 
         fold_metrics = evaluate_model(
@@ -769,12 +775,20 @@ def main():
 
     # Save aggregated best parameters
     param_summary = {}
-    for param_name in all_best_params[0].keys():
-        param_values = [params[param_name] for params in all_best_params]
+    # Folds may pick different depths, so hidden_dim_i is absent from folds with fewer layers.
+    param_names = dict.fromkeys(name for params in all_best_params for name in params)
+    for param_name in param_names:
+        param_values = [
+            params[param_name] for params in all_best_params if param_name in params
+        ]
+        is_architecture = param_name == "n_layers" or param_name.startswith("hidden_dim_")
 
-        # Check if all values are numeric
-        if all(isinstance(val, (int, float)) for val in param_values):
-            param_summary[param_name] = np.mean(param_values)
+        # Average continuous parameters; bools and architecture choices take the mode
+        if not is_architecture and all(
+            isinstance(val, (int, float)) and not isinstance(val, bool)
+            for val in param_values
+        ):
+            param_summary[param_name] = float(np.mean(param_values))
         else:
             # For categorical parameters, take the most common
             param_summary[param_name] = max(set(param_values), key=param_values.count)

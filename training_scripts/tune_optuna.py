@@ -5,7 +5,7 @@ import numpy as np
 import optuna
 import torch
 import yaml
-from model_utils import EarlyStopping, set_seed
+from model_utils import DEVICE_CHOICES, DEVICE_HELP, EarlyStopping, get_device, set_seed
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
-    compute_baseline_cif,
+    compute_breslow_baseline,
     compute_l2_penalty,
     negative_log_likelihood_loss,
     predict_absolute_risk,
@@ -84,6 +84,9 @@ def parse_args():
     # Other parameters
     parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--device", type=str, default="auto", choices=DEVICE_CHOICES, help=DEVICE_HELP
     )
 
     return parser.parse_args()
@@ -415,11 +418,10 @@ def objective(
     eval_times = np.quantile(t_train[t_train <= safe_max], [0.25, 0.5, 0.75])
 
     # Calculate baseline CIFs
-    baseline_cifs = {k: compute_baseline_cif(t_train, e_train, eval_times, k + 1)
-                    for k in range(num_competing_risks)}
+    baseline = compute_breslow_baseline(model, x_train, t_train, e_train, device=device)
 
     # Predict and evaluate
-    abs_risks = predict_absolute_risk(model, x_val, baseline_cifs, eval_times, device=device)
+    abs_risks = predict_absolute_risk(model, x_val, baseline, eval_times, device=device)
     _, avg_auc = evaluate_model(model, x_val, t_val, e_val, t_train, e_train, abs_risks, eval_times)
 
     return avg_auc  # Maximize AUC
@@ -452,7 +454,7 @@ def main():
 
     # Compute number of competing risks
     num_competing_risks = len(np.unique(e)) - 1  # Excluding censoring (0)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device(args.device)
 
     # Split data into train and validation sets
     x_train, x_val, t_train, t_val, e_train, e_val = train_test_split(
@@ -519,7 +521,9 @@ def main():
         event_weights = torch.tensor(event_weights, dtype=torch.float32, device=device)
 
     # Create Optuna study
-    study = optuna.create_study(direction="minimize")  # Minimize validation loss
+    study = optuna.create_study(
+        direction="minimize", sampler=optuna.samplers.TPESampler(seed=args.seed)
+    )  # Minimize validation loss
 
     # Run optimization
     print("\n=== Starting Optuna hyperparameter optimization ===")
@@ -639,14 +643,13 @@ def main():
     print(f"Evaluation times: {eval_times}")
 
     # Calculate baseline CIFs
-    baseline_cifs = {
-        k: compute_baseline_cif(t_train, e_train, eval_times, k + 1)
-        for k in range(num_competing_risks)
-    }
+    baseline = compute_breslow_baseline(
+        final_model, x_train, t_train, e_train, device=device
+    )
 
     # Predict and evaluate
     abs_risks = predict_absolute_risk(
-        final_model, x_val, baseline_cifs, eval_times, device=device
+        final_model, x_val, baseline, eval_times, device=device
     )
     final_metrics, _ = evaluate_model(
         final_model, x_val, t_val, e_val, t_train, e_train, abs_risks, eval_times
