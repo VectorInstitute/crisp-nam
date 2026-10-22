@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 import yaml
 from model_utils import EarlyStopping, set_seed
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sksurv.metrics import concordance_index_ipcw
@@ -443,13 +444,13 @@ def main():
 
     # Load dataset
     if args.dataset.lower() == "framingham":
-        x, t, e, feature_names, n_cont, _ = load_framingham()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_framingham()
     elif args.dataset.lower() == "support":
-        x, t, e, feature_names, n_cont, _ = load_support_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_support_dataset()
     elif args.dataset.lower() == "pbc":
-        x, t, e, feature_names, n_cont, _ = load_pbc2_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_pbc2_dataset()
     elif args.dataset.lower() == "synthetic":
-        x, t, e, feature_names, n_cont, _ = load_synthetic_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_synthetic_dataset()
     else:
         raise ValueError(f"Dataset {args.dataset} not supported")
 
@@ -476,6 +477,14 @@ def main():
         x_train_outer, x_test_outer = x[train_idx].copy(), x[test_idx].copy()
         t_train_outer, t_test_outer = t[train_idx], t[test_idx]
         e_train_outer, e_test_outer = e[train_idx], e[test_idx]
+
+        # Impute continuous features per-fold (fit on train only) to avoid leakage
+        if cont_impute_strategy is not None:
+            cont_imputer = SimpleImputer(strategy=cont_impute_strategy)
+            x_train_outer[:, -n_cont:] = cont_imputer.fit_transform(
+                x_train_outer[:, -n_cont:]
+            )
+            x_test_outer[:, -n_cont:] = cont_imputer.transform(x_test_outer[:, -n_cont:])
 
         # Apply scaling within outer fold
         if args.scaling.lower() == "standard":
@@ -641,6 +650,9 @@ def main():
 
     # Use the entire dataset for plotting (with proper scaling)
     x_plot = x.copy()
+    if cont_impute_strategy is not None:
+        plot_imputer = SimpleImputer(strategy=cont_impute_strategy)
+        x_plot[:, -n_cont:] = plot_imputer.fit_transform(x_plot[:, -n_cont:])
     if args.scaling.lower() == "standard":
         scaler = StandardScaler()
         x_plot[:, -n_cont:] = scaler.fit_transform(x_plot[:, -n_cont:])

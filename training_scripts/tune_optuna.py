@@ -6,6 +6,7 @@ import optuna
 import torch
 import yaml
 from model_utils import EarlyStopping, set_seed
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sksurv.metrics import brier_score, concordance_index_ipcw, cumulative_dynamic_auc
@@ -437,13 +438,13 @@ def main():
 
     # Load the dataset
     if args.dataset.lower() == "framingham":
-        x, t, e, feature_names, n_cont, _ = load_framingham()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_framingham()
     elif args.dataset.lower() == "support":
-        x, t, e, feature_names, n_cont, _ = load_support_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_support_dataset()
     elif args.dataset.lower() == "pbc":
-        x, t, e, feature_names, n_cont, _ = load_pbc2_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_pbc2_dataset()
     elif args.dataset.lower() == "synthetic":
-        x, t, e, feature_names, n_cont, _ = load_synthetic_dataset()
+        x, t, e, feature_names, n_cont, _, cont_impute_strategy = load_synthetic_dataset()
     else:
         raise ValueError(f"Dataset {args.dataset} not supported")
 
@@ -457,6 +458,12 @@ def main():
     x_train, x_val, t_train, t_val, e_train, e_val = train_test_split(
         x, t, e, test_size=0.2, random_state=args.seed, stratify=e
     )
+
+    # Impute continuous features per-split (fit on train only) to avoid leakage
+    if cont_impute_strategy is not None:
+        cont_imputer = SimpleImputer(strategy=cont_impute_strategy)
+        x_train[:, -n_cont:] = cont_imputer.fit_transform(x_train[:, -n_cont:])
+        x_val[:, -n_cont:] = cont_imputer.transform(x_val[:, -n_cont:])
 
     # Apply scaling after split to prevent data leakage
     if args.scaling.lower() == "standard":
