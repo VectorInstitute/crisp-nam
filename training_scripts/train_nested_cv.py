@@ -17,7 +17,7 @@ from tabulate import tabulate
 from torch import optim
 from torch.utils.data import DataLoader
 
-from crisp_nam.metrics import auc_td, brier_score
+from crisp_nam.metrics import auc_td, brier_score, truncated_concordance_td
 from crisp_nam.models import CrispNamModel
 from crisp_nam.utils import (
     compute_breslow_baseline,
@@ -340,6 +340,22 @@ def evaluate_model(model, x_val, t_val, e_val, t_train, e_train, abs_risks, time
                 print(f"[Warning] td-CI failed at t={time:.2f}, event={k + 1}: {ex}")
                 metrics[f"tdci_event{k + 1}_t{time:.2f}"].append(np.nan)
 
+            # Competing-risks C-index for this cause (Wolbers et al., 2014)
+            try:
+                crci_score, _ = truncated_concordance_td(
+                    e_val,
+                    t_val,
+                    risk_preds_2d,
+                    times,
+                    time,
+                    km=(e_train, t_train),
+                    primary_risk=k + 1,
+                )
+                metrics[f"crci_event{k + 1}_t{time:.2f}"].append(float(crci_score))
+            except Exception as ex:
+                print(f"[Warning] CR C-index failed at t={time:.2f}, event={k + 1}: {ex}")
+                metrics[f"crci_event{k + 1}_t{time:.2f}"].append(np.nan)
+
     return metrics
 
 
@@ -349,7 +365,7 @@ def display_metrics_table(
     """Display evaluation metrics table and return processed data"""
     time_points_by_metric = {}
     event_types = set()
-    metric_types = ["auc", "tdci", "brier"]
+    metric_types = ["auc", "tdci", "brier", "crci"]
 
     for key, values in metrics_dict.items():
         if any(metric in key for metric in metric_types):
@@ -421,7 +437,7 @@ def display_metrics_table(
     detailed_df = pd.DataFrame(detailed_results)
 
     columns = ["Risk"]
-    for metric in ["AUC", "TDCI", "BRIER"]:
+    for metric in ["AUC", "TDCI", "CRCI", "BRIER"]:
         for q in quantiles:
             columns.append(f"{metric}_q{q:.2f}")
 
@@ -432,7 +448,8 @@ def display_metrics_table(
 
     print("\nInterpretation:")
     print("- AUC: 0.5=random, >0.7=good, >0.8=excellent")
-    print("- TDCI (Time-Dependent C-Index): 0.5=random, >0.7=good, >0.8=excellent")
+    print("- TDCI (Time-Dependent C-Index, any event as outcome): 0.5=random, >0.7=good, >0.8=excellent")
+    print("- CRCI (Competing-risks C-index for this cause): 0.5=random, >0.7=good, >0.8=excellent")
     print("- Brier Score: 0=perfect, <0.25=good, >0.25=poor")
 
     return summary_df, detailed_df
